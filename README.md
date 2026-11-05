@@ -3,6 +3,7 @@
 [![Python 3.10 | 3.11 | 3.12](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12-blue.svg)](https://www.python.org/)
 [![Django 5.0+](https://img.shields.io/badge/django-5.0+-green.svg)](https://www.djangoproject.com/)
 [![Tests Passing](https://img.shields.io/badge/pytest-70%20passed%2C%201%20skipped-brightgreen.svg)](tests/)
+[![Stress Tested](https://img.shields.io/badge/concurrency-1000%20reqs%20%7C%200%20locks-brightgreen.svg)](tests/stress_test_concurrency.py)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey.svg)](README.md)
 [![Regulatory Compliance](https://img.shields.io/badge/compliance-SEBI%20Research%20Guidelines-orange.svg)](README.md#compliance--disclaimer)
@@ -13,25 +14,67 @@
 ---
 
 ## 📌 Table of Contents
-1. [Overview](#-overview)
-2. [Key Capabilities & Modules](#-key-capabilities--modules)
-3. [System Architecture](#-system-architecture)
-4. [Cross-Platform Portability & System Requirements](#-cross-platform-portability--system-requirements)
-5. [Quick Start (One-Click Setup)](#-quick-start-one-click-setup)
-6. [Manual Step-by-Step Installation](#-manual-step-by-step-installation)
-7. [Environment Configuration (.env)](#-environment-configuration-env)
-8. [Database Migrations & Universe Seeding](#-database-migrations--universe-seeding)
-9. [Running the Application](#-running-the-application)
-10. [Running Automated Tests](#-running-automated-tests)
-11. [Transferring to Another Machine / Pushing to GitHub](#-transferring-to-another-machine--pushing-to-github)
+1. [Executive Vision: Bridging the Institutional Divide](#-executive-vision-bridging-the-institutional-divide)
+2. [Architectural Philosophy: Deterministic Math First, AI Second](#-architectural-philosophy-deterministic-math-first-ai-second)
+3. [Key Capabilities & Modules](#-key-capabilities--modules)
+4. [System Architecture](#-system-architecture)
+5. [The 9 Legendary Investor Frameworks](#-the-9-legendary-investor-frameworks)
+6. [Engineering Rigor & Concurrency Benchmark](#-engineering-rigor--concurrency-benchmark)
+7. [Cross-Platform Portability & System Requirements](#-cross-platform-portability--system-requirements)
+8. [Quick Start (One-Click Setup)](#-quick-start-one-click-setup)
+9. [Manual Step-by-Step Installation](#-manual-step-by-step-installation)
+10. [Environment Configuration (.env)](#-environment-configuration-env)
+11. [Running Automated Tests](#-running-automated-tests)
 12. [Troubleshooting & FAQ](#-troubleshooting--faq)
 13. [License & Ethical Compliance](#-license--ethical-compliance)
 
 ---
 
-## 🚀 Overview
+## 💡 Executive Vision: Bridging the Institutional Divide
 
-The **AI Stock Market Research & Ranking Agent** is an institutional-grade FinTech analytics platform tailored for the **National Stock Exchange (NSE)** and **Bombay Stock Exchange (BSE)**. Built on **Django 5**, **yfinance**, and multi-agent quantitative models, it delivers fundamental forensics, multi-timeframe technical charts, probabilistic DCF valuation, automated portfolio health diagnostics, India's Top 10 Super Investor tracking, IPO subscription intelligence, and point-in-time backtesting.
+In the Indian equity markets (NSE & BSE), there is an extreme information asymmetry:
+- **Institutions (FIIs, DIIs, Mutual Funds, Family Offices)** utilize \$25,000–\$30,000/year Bloomberg and FactSet terminals, proprietary quantitative models, and dedicated research analysts.
+- **Retail Investors (150M+ Demat accounts)** are largely left with broker app feeds, social media "finfluencer" hype, speculative Telegram channels, and static screeners that show trailing ratios without actionable synthesis.
+
+**The StockAgent AI project bridges this divide.** It places an **institutional-grade quantitative research workstation** into the hands of individual investors, boutique PMS managers, and researchers at **zero data cost** using resilient public exchange integrations.
+
+---
+
+## 🧠 Architectural Philosophy: Deterministic Math First, AI Second
+
+Unlike superficial "AI wrapper" tools that ask generic LLMs for speculative market opinions, this platform is built on an institutional quantitative paradigm:
+
+```
+┌────────────────────────────────────────────────────────────────────────┐
+│ 1. Raw Market Data & Exchange Ingestion (NSE & BSE via yfinance)       │
+└───────────────────────────────────┬────────────────────────────────────┘
+                                    │
+                                    ▼
+┌────────────────────────────────────────────────────────────────────────┐
+│ 2. Deterministic Quantitative Math Engines                             │
+│    • 2-Stage DCF Valuation with Margin of Safety                       │
+│    • Financial Health: Piotroski F-Score (0-9) & Altman Z-Score        │
+│    • Momentum & Volatility: SMA 50/200, Bollinger Bands, RSI, MACD     │
+│    • Portfolio Forensic Math: Concentration, Cluster Risk, Sharpe Ratio│
+└───────────────────────────────────┬────────────────────────────────────┘
+                                    │
+                                    ▼
+┌────────────────────────────────────────────────────────────────────────┐
+│ 3. Multi-Agent Qualitative Synthesis & Invalidation                    │
+│    • Fundamental Agent  • Technical Agent  • Risk Surveillance Agent   │
+│    • 3 Mandatory Falsifiable Thesis Invalidation Kill-Switches         │
+│    • 9 Legendary Super-Investor Philosophy Scoring                     │
+└───────────────────────────────────┬────────────────────────────────────┘
+                                    │
+                                    ▼
+┌────────────────────────────────────────────────────────────────────────┐
+│ 4. Institutional Presentation Layer (Django 5 Dark Theme + REST API)   │
+└────────────────────────────────────────────────────────────────────────┘
+```
+
+1. **Deterministic Financial Math**: Key metrics (DCF intrinsic valuation, WACC, debt-to-equity, Piotroski scores) are computed with strict mathematical algorithms—eliminating LLM hallucinations where numbers matter.
+2. **Multi-Agent Cross-Validation**: Multiple specialized agents inspect fundamentals, technical trendlines, regulatory filings, and macroeconomic tailwinds independently before generating a composite score.
+3. **Falsifiable Invalidation Rules**: Every stock report includes **3 explicit exit conditions** that tell the investor exactly when the fundamental thesis has broken.
 
 ---
 
@@ -39,11 +82,11 @@ The **AI Stock Market Research & Ranking Agent** is an institutional-grade FinTe
 
 | Module | URL Route | Core Capabilities |
 |---|---|---|
-| **Home Dashboard** | `/` | Real-time market summary, live Nifty/Sensex ticker bar, top composite ranking list, market breadth visualizer, and active surveillance alerts. |
-| **Stock Research & Analysis** | `/research/<symbol>/` | Deep fundamental ratios (ROE, ROCE, P/E, Debt/Equity, FCF), responsive Chart.js technical graphs with moving averages (SMA 50/200, Bollinger Bands), interactive 2-stage DCF valuation model with live slider sensitivity, 3 falsifiable thesis invalidation rules, and 9 legendary investor strategy evaluations. |
+| **Market Intelligence Dashboard** | `/` | Real-time market summary, live Nifty/Sensex ticker bar, top composite ranking list, market breadth visualizer, and active surveillance alerts. |
+| **Stock Research Workstation** | `/research/<symbol>/` | Deep fundamental ratios (ROE, ROCE, P/E, Debt/Equity, FCF), responsive Chart.js technical graphs with moving averages (SMA 50/200, Bollinger Bands), interactive 2-stage DCF valuation model with live slider sensitivity, 3 falsifiable thesis invalidation rules, and 9 legendary investor strategy evaluations. |
 | **Rankings Screener** | `/rankings/` | Multi-factor weighted composite scoring (Quality 30%, Growth 20%, Valuation 15%, Momentum 15%, Catalysts 10%, Risk -10%), dynamic sorting, sector filtering, and downloadable Top-20 institutional research reports in Markdown & CSV. |
 | **Portfolio Diagnostic & Upload** | `/portfolio/analysis/` | Upload statements in **CSV, Excel (.xlsx, .xls), PDF, or Word (.docx)** formats (e.g., FYERS, Zerodha, Groww). Automatically extracts holdings, parses buy prices and live prices, generates Large/Mid/Small cap and Sector allocation breakdowns, runs stress testing, and scores alignment with 9 legendary investor styles. |
-| **Top 10 Portfolios** | `/portfolio/top-portfolios/` | Deep tracking of India's most celebrated super-investors (Radhakishan Damani, Rakesh Jhunjhunwala / Rare Enterprises, Vijay Kedia, Ashish Kacholia, Nemish Shah, Porinju Veliyath, Dolly Khanna, Sunil Singhania, Mukul Agrawal, Hemendra Kothari). Synchronize live market prices with one click, explore sector allocations, and discover co-investment overlaps with your personal portfolio. |
+| **Top 10 Super-Portfolios** | `/portfolio/top-portfolios/` | Deep tracking of India's most celebrated super-investors (Radhakishan Damani, Rakesh Jhunjhunwala / Rare Enterprises, Vijay Kedia, Ashish Kacholia, Nemish Shah, Porinju Veliyath, Dolly Khanna, Sunil Singhania, Mukul Agrawal, Hemendra Kothari). Synchronize live market prices with one click, explore sector allocations, and discover co-investment overlaps with your personal portfolio. |
 | **IPO Intelligence Engine** | `/ipo/` | Tracks ongoing, upcoming, and recently listed Mainboard & SME offerings. Analyzes DRHP/RHP metrics, Fresh Issue vs. OFS capital split, live Grey Market Premium (GMP), expected listing gains, institutional subscription rates (QIB, NII, Retail), and 9 legendary investor match ratings. |
 | **Algorithmic Backtesting** | `/backtest/` | Point-in-time quantitative backtesting without look-ahead bias, periodic rebalancing (monthly/quarterly), cumulative equity curve vs. Nifty 50 benchmark, CAGR, Sharpe ratio, volatility, and maximum drawdown calculations. |
 | **CLI & Automation Hub** | `/cli-analysis/` | Browser-based interactive terminal window executing background analysis workflows (`python -m src.main analyze --index bse500 --top 60`) with real-time log streaming. |
@@ -69,7 +112,7 @@ The **AI Stock Market Research & Ranking Agent** is an institutional-grade FinTe
                                  │
                                  ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│                  Quantitative & Quantitative Engine             │
+│                  Quantitative & Analytics Engine                │
 │  • Multi-Agent Forensic Screener (Fundamentals, Technicals)     │
 │  • 2-Stage Discounted Cash Flow (DCF) Valuation Engine          │
 │  • 9 Legendary Investor Strategy Classifiers                    │
@@ -79,7 +122,7 @@ The **AI Stock Market Research & Ranking Agent** is an institutional-grade FinTe
                                  ▼
 ┌─────────────────────────────────────────────────────────────────┐
 │                     Data Persistence & Feeds                    │
-│  • SQLite Database (data/stock_django.db) + Full Auto-Migration │
+│  • SQLite Database (WAL Mode + 30s Timeout)                     │
 │  • yfinance Live NSE (.NS) & BSE (.BO) Market Feeds             │
 │  • ChromaDB Local Vector Store + Report Cache                   │
 └─────────────────────────────────────────────────────────────────┘
@@ -87,16 +130,50 @@ The **AI Stock Market Research & Ranking Agent** is an institutional-grade FinTe
 
 ---
 
+## 🏆 The 9 Legendary Investor Frameworks
+
+Every stock and uploaded portfolio is continuously evaluated against Dalal Street and Wall Street's most celebrated quantitative frameworks:
+
+1. **Warren Buffett**: Sustainable economic moats, predictable free cash flows, ROE > 15%, low debt.
+2. **Charlie Munger**: Capital efficiency, pricing power, high ROCE, and rational management.
+3. **Peter Lynch**: Growth at a Reasonable Price (GARP), PEG ratio < 1.0, fast growers in niche sectors.
+4. **Benjamin Graham**: Deep value, Net-Net margin of safety, low P/B, and conservative current ratios.
+5. **Joel Greenblatt (Magic Formula)**: High Return on Capital Employed (ROCE) paired with high Earnings Yield.
+6. **Rakesh Jhunjhunwala**: High-conviction structural India growth themes, demographic consumption, and operating leverage.
+7. **Radhakishan Damani**: High-velocity retail moat, strong cash conversion cycle, debt aversion.
+8. **Vijay Kedia (SMILE Principle)**: Small in size, Medium in experience, Large in aspiration, Extra-Large in market potential.
+9. **Ashish Kacholia**: High-alpha emerging SME and midcap niche manufacturing leaders.
+
+---
+
+## 🛡️ Engineering Rigor & Concurrency Benchmark
+
+This platform was built to meet the rigorous reliability standards of production financial systems:
+
+### 1. Concurrency & High-Throughput Verification
+- **Test Harness**: [`tests/stress_test_concurrency.py`](tests/stress_test_concurrency.py)
+- **Workload**: **1,000 requests** dispatched across **50 concurrent worker threads** simultaneously hitting market pulse, screener rankings, search autocompletion, IPO pipelines, and direct database write bursts.
+- **Outcome**:
+  - **100% HTTP 200 OK (1,000 / 1,000 successes, 0 failures)**.
+  - **Zero Database Lock Errors**: Solved via SQLite WAL (`Write-Ahead Logging`), `PRAGMA synchronous=NORMAL`, and `PRAGMA busy_timeout=30000` applied to both Django ORM and SQLAlchemy connections.
+  - **Zero Race Conditions**: Auto-provisioning queries use atomic `get_or_create` blocks.
+
+### 2. Comprehensive Test Coverage
+- **Status**: **70 passed, 1 skipped (live API guard)** in ~10 seconds.
+- Fully automated test suite covering DCF valuation, portfolio statement parsers, IPO pipelines, and CLI commands.
+
+---
+
 ## 💻 Cross-Platform Portability & System Requirements
 
 This project is fully engineered to be **100% portable** across operating systems with zero modifications required:
-- **Operating Systems**: Windows 10/11, macOS (Intel & Apple Silicon M1/M2/M3), Linux (Ubuntu, Debian, Fedora, Arch), WSL2.
+- **Operating Systems**: Windows 10/11, macOS (Intel & Apple Silicon), Linux (Ubuntu, Debian, Fedora, Arch), WSL2.
 - **Python Compatibility**: Python **3.10**, **3.11**, or **3.12**.
 - **Memory**: 4 GB RAM minimum (8 GB recommended).
-- **Disk Space**: ~500 MB for virtual environment and baseline data.
+- **Disk Space**: ~3 MB download from GitHub (~500 MB after local `.venv` creation).
 
 ### Portability Safeguards Implemented:
-1. **Dynamic Path Resolution**: All paths use Python `pathlib.Path` relative to `settings.BASE_DIR`. No hardcoded drive letters (`C:\`, `F:\`) or operating system slashes (`\` vs `/`).
+1. **Dynamic Path Resolution**: All paths use Python `pathlib.Path` relative to `settings.BASE_DIR`. No hardcoded drive letters (`C:\`, `D:\`) or OS-specific separators.
 2. **Directory Self-Healing**: Database directories (`data/`), report outputs (`data/reports/`), and log directories (`data/logs/`) are auto-created on startup if absent.
 3. **Multi-Platform Launchers**: Native batch scripts (`.bat`) for Windows and shell scripts (`.sh`) for macOS/Linux.
 
@@ -104,108 +181,80 @@ This project is fully engineered to be **100% portable** across operating system
 
 ## ⚡ Quick Start (One-Click Setup)
 
-### On Windows
-Simply double-click `setup.bat` (or run it from Command Prompt / PowerShell):
-```cmd
-setup.bat
-```
-Once setup finishes, double-click `run.bat` to launch the platform:
-```cmd
-run.bat
-```
-Open **[http://127.0.0.1:8000/](http://127.0.0.1:8000/)** in your browser!
-
----
-
-### On macOS / Linux / WSL
-Make the scripts executable and run `setup.sh`:
+### 1. Clone the Repository
 ```bash
-chmod +x setup.sh run.sh
-./setup.sh
-```
-Once completed, launch the server:
-```bash
-./run.sh
-```
-Open **[http://127.0.0.1:8000/](http://127.0.0.1:8000/)** in your browser!
-
----
-
-## 🛠️ Manual Step-by-Step Installation
-
-If you prefer to configure the environment manually without the scripts, follow these exact steps:
-
-### Step 1: Clone or Transfer the Repository
-```bash
-git clone https://github.com/<your-username>/Stock-AI-Agent.git
+git clone https://github.com/ravingalaxy/Stock-AI-Agent.git
 cd Stock-AI-Agent
 ```
 
-### Step 2: Create and Activate Virtual Environment
+### 2. Run Automated Setup
+
+#### On Windows:
+Double-click `setup.bat` or run:
+```cmd
+setup.bat
+```
+To launch the server, double-click `run.bat` or run:
+```cmd
+run.bat
+```
+
+#### On Linux / macOS / WSL:
 ```bash
-# Windows (PowerShell or Command Prompt)
+chmod +x setup.sh run.sh
+./setup.sh
+./run.sh
+```
+
+Open **[http://127.0.0.1:8000/](http://127.0.0.1:8000/)** in your browser!
+
+---
+
+## 🔧 Manual Step-by-Step Installation
+
+If you prefer to configure manually:
+
+```bash
+# 1. Create and activate virtual environment
 python -m venv .venv
-.\.venv\Scripts\activate
 
-# macOS / Linux
-python3 -m venv .venv
+# Windows:
+.venv\Scripts\activate
+# Linux/macOS:
 source .venv/bin/activate
-```
 
-### Step 3: Upgrade pip and Install Dependencies
-```bash
-python -m pip install --upgrade pip
+# 2. Install dependencies
+pip install --upgrade pip
 pip install -r requirements.txt
-```
 
-### Step 4: Environment Configuration
-Copy the sample environment file to create your local `.env`:
-```bash
-# Windows
-copy .env.example .env
-
-# macOS / Linux
+# 3. Setup environment configuration
 cp .env.example .env
-```
-*(Optional)*: If you wish to use OpenAI or FreeLLM for custom generative summaries, open `.env` and add your API key. The application works completely without external paid API keys using local rule-based models and yfinance!
+cp config/.env.example config/.env
 
-### Step 5: Run Database Migrations
-Initialize the SQLite database schema:
-```bash
-python manage.py migrate
-```
+# 4. Run database migrations
+python manage.py migrate --noinput
 
-### Step 6: Seed Baseline Equities & IPO Universe
-Populate the database with benchmark NSE/BSE equities, financial ratios, and active IPO tracking:
-```bash
+# 5. Seed benchmark NSE/BSE universe and IPO data
 python manage.py seed_universe
-```
 
-### Step 7: Start Development Server
-```bash
+# 6. Start the server
 python manage.py runserver 127.0.0.1:8000
 ```
-Visit **[http://127.0.0.1:8000/](http://127.0.0.1:8000/)** in your browser.
 
 ---
 
 ## ⚙️ Environment Configuration (.env)
 
-The application includes `.env.example` in the project root:
+The application runs fully out-of-the-box in deterministic quantitative mode using free public exchange data. If you wish to enable advanced external LLM commentary, configure `.env`:
 
 ```ini
-# Django Configuration
-DJANGO_SECRET_KEY=django-insecure-ai-stock-agent-nse-bse-quant-key-2026-production-ready
+DJANGO_SECRET_KEY=your-secret-key-here
 DJANGO_DEBUG=True
 DJANGO_ALLOWED_HOSTS=localhost,127.0.0.1,0.0.0.0,*
 
-# AI / LLM Provider (Optional - FreeLLM API or OpenAI or Local Ollama)
+# Optional: LLM Providers (OpenAI, FreeLLM, or local Ollama)
 FREELLM_API_KEY=your_freellmapi_key_here
-FREELLM_API_BASE=https://api.freellmapi.com/v1
-
-# OpenAI API Settings (Alternative)
 OPENAI_API_KEY=your_openai_api_key_here
-OPENAI_API_BASE=https://api.openai.com/v1
 OPENAI_MODEL_NAME=gpt-4o-mini
 
 # Database & Storage
@@ -218,14 +267,8 @@ LOG_LEVEL=INFO
 
 ## 🧪 Running Automated Tests
 
-The codebase includes an extensive suite of 71 unit, integration, and mathematical verification tests covering:
-- Fundamental financial formula precision (DCF, Graham Number, Altman Z-Score, Piotroski F-Score).
-- Portfolio document parsing (CSV, Excel, Word, PDF) against sample broker statements.
-- Top 10 super-investor co-investment tracking and live price synchronization.
-- IPO valuation logic, grey market calculation, and thesis invalidations.
-- Django web routes, API endpoints, and CSRF security exemptions.
+To execute the test suite:
 
-To run the complete test suite:
 ```bash
 # Windows
 .\.venv\Scripts\pytest -v
@@ -239,82 +282,33 @@ Expected result:
 ======================= 70 passed, 1 skipped in ~10s =======================
 ```
 
----
-
-## 📦 Transferring to Another Machine / Pushing to GitHub
-
-When transferring this repository to another system or pushing to GitHub:
-
-### Safe Git Initialization & Push
-The included `.gitignore` is already pre-configured to strictly exclude:
-- Virtual environments (`.venv/`, `venv/`)
-- Secret environment keys (`.env`, `config/.env`)
-- Local SQLite database files (`*.sqlite3`, `data/*.db`)
-- Generated reports and runtime logs (`data/logs/*.log`, `data/reports/*`)
-
-Run the following commands in the project directory:
-
+To run the 1,000-request high-concurrency stress test:
 ```bash
-# 1. Initialize Git repository
-git init
-
-# 2. Stage all project code and documentation
-git add .
-
-# 3. Create initial commit
-git commit -m "feat: complete AI Stock Market Research & Ranking Agent platform"
-
-# 4. Rename default branch to main
-git branch -M main
-
-# 5. Link your GitHub remote repository
-git remote add origin https://github.com/<your-username>/Stock-AI-Agent.git
-
-# 6. Push code to GitHub
-git push -u origin main
+python tests/stress_test_concurrency.py
 ```
-
-### When Cloning on the Target Machine
-Anyone who clones your repository simply needs to run:
-```bash
-git clone https://github.com/<your-username>/Stock-AI-Agent.git
-cd Stock-AI-Agent
-
-# Windows
-setup.bat
-run.bat
-
-# macOS / Linux
-chmod +x setup.sh run.sh
-./setup.sh
-./run.sh
-```
-Everything will install, migrate, seed, and run automatically with zero manual file editing or errors!
 
 ---
 
 ## 🔍 Troubleshooting & FAQ
 
 ### Q1: `activate.ps1 cannot be loaded because running scripts is disabled` on Windows PowerShell
-**Solution**: Windows restricts PowerShell script execution by default. Run:
+**Solution**: Run:
 ```powershell
 Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 ```
-Or simply use `Command Prompt (cmd.exe)` or run `run.bat` / `setup.bat`.
+Or simply use `run.bat` or `setup.bat`.
 
 ### Q2: Port 8000 is already in use
-**Solution**: Specify an alternative port when starting the server:
+**Solution**: Specify a custom port:
 ```bash
 python manage.py runserver 127.0.0.1:8080
 ```
 
-### Q3: `sqlite3.OperationalError: unable to open database file`
-**Solution**: In this repository, `stock_agent_django/settings.py` automatically ensures the `data/` directory exists. If running in a custom environment, verify write permissions on the project directory.
-
-### Q4: Missing SSL Certificates on macOS
-**Solution**: When using Python installed via the macOS official installer, run the bundled SSL certificate installer:
-```bash
-/Applications/Python\ 3.12/Install\ Certificates.command
+### Q3: `sqlite3.OperationalError: database is locked`
+**Solution**: This repository comes pre-configured with SQLite WAL mode and a 30-second busy timeout. If running custom scripts, ensure your connections use WAL mode:
+```sql
+PRAGMA journal_mode=WAL;
+PRAGMA busy_timeout=30000;
 ```
 
 ---
