@@ -1,0 +1,170 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}AI Stock Market Research & Ranking Agent (NSE & BSE){% endblock %}</title>
+    
+    <!-- Favicon & Touch Icons -->
+    <link rel="icon" type="image/svg+xml" href="{% static 'images/favicon.svg' %}">
+    <link rel="icon" type="image/png" sizes="32x32" href="{% static 'images/favicon-32x32.png' %}">
+    <link rel="icon" type="image/png" sizes="16x16" href="{% static 'images/favicon-16x16.png' %}">
+    <link rel="shortcut icon" href="{% static 'images/favicon.ico' %}">
+    <link rel="apple-touch-icon" sizes="180x180" href="{% static 'images/apple-touch-icon.png' %}">
+    <meta name="theme-color" content="#0f172a">
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Chart.js and Zoom/Pan Plugins for High-Performance Financial Charts -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8/hammer.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
+
+    <!-- Custom FinTech Design System -->
+    <link rel="stylesheet" href="{% static 'css/fintech.css' %}">
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar Navigation -->
+        <aside class="app-sidebar">
+            <div class="sidebar-brand">
+                <div class="brand-icon">📈</div>
+                <div>
+                    <div class="brand-title">StockAgent AI</div>
+                    <div class="brand-subtitle">NSE & BSE Quant Platform</div>
+                </div>
+            </div>
+
+            <!-- Market Status Chip -->
+            <div style="padding: 0.85rem 1.25rem; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between;">
+                <div style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.8rem;">
+                    <span style="width: 8px; height: 8px; border-radius: 50%; background: {% if MARKET_IS_OPEN %}#10b981{% else %}#ef4444{% endif %}; display: inline-block;"></span>
+                    <span style="font-weight: 600; color: {% if MARKET_IS_OPEN %}#10b981{% else %}#94a3b8{% endif %};">
+                        {% if MARKET_IS_OPEN %}LIVE MARKET{% else %}MARKET CLOSED{% endif %}
+                    </span>
+                </div>
+                <span style="font-size: 0.72rem; color: var(--text-muted); font-family: var(--font-mono);">IST</span>
+            </div>
+
+            <nav class="sidebar-nav">
+                <div class="nav-category">Core Platform</div>
+                <a href="{% url 'market:dashboard' %}" class="nav-link {% if request.resolver_match.app_name == 'market' and request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+                    <span class="nav-icon">🏠</span>
+                    <span>Home (Dashboard)</span>
+                </a>
+                <a href="{% url 'research:research_default' %}" class="nav-link {% if request.resolver_match.app_name == 'research' %}active{% endif %}">
+                    <span class="nav-icon">🔍</span>
+                    <span>Stock Analysis</span>
+                </a>
+                <a href="{% url 'rankings:screener' %}" class="nav-link {% if request.resolver_match.app_name == 'rankings' %}active{% endif %}">
+                    <span class="nav-icon">📈</span>
+                    <span>Rankings &amp; Screener</span>
+                </a>
+                <a href="{% url 'portfolio:dashboard' %}" class="nav-link {% if request.resolver_match.app_name == 'portfolio' and request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+                    <span class="nav-icon">💼</span>
+                    <span>Portfolio Tools</span>
+                </a>
+                <a href="{% url 'portfolio:analysis' %}" class="nav-link {% if request.resolver_match.app_name == 'portfolio' and request.resolver_match.url_name == 'analysis' %}active{% endif %}">
+                    <span class="nav-icon">📊</span>
+                    <span>Portfolio Analysis</span>
+                </a>
+                <a href="{% url 'portfolio:top_portfolios' %}" class="nav-link {% if request.resolver_match.app_name == 'portfolio' and request.resolver_match.url_name in 'top_portfolios,top_portfolio_detail' %}active{% endif %}">
+                    <span class="nav-icon">🏆</span>
+                    <span>Top 10 Portfolios</span>
+                </a>
+                <a href="{% url 'backtesting:backtest_dashboard' %}" class="nav-link {% if request.resolver_match.app_name == 'backtesting' %}active{% endif %}">
+                    <span class="nav-icon">🔄</span>
+                    <span>Quant Backtesting</span>
+                </a>
+                <a href="{% url 'market:settings' %}" class="nav-link {% if request.resolver_match.app_name == 'market' and request.resolver_match.url_name == 'settings' %}active{% endif %}">
+                    <span class="nav-icon">⚙️</span>
+                    <span>Settings &amp; Weights</span>
+                </a>
+                <a href="{% url 'ipo:dashboard' %}" class="nav-link {% if request.resolver_match.app_name == 'ipo' %}active{% endif %}">
+                    <span class="nav-icon">🎯</span>
+                    <span>IPO Analysis</span>
+                </a>
+                <a href="{% url 'market:cli_analysis' %}" class="nav-link {% if request.resolver_match.app_name == 'market' and request.resolver_match.url_name == 'cli_analysis' %}active{% endif %}">
+                    <span class="nav-icon">🖥️</span>
+                    <span>CLI &amp; Batch Analysis</span>
+                </a>
+<!--
+                <div class="nav-category">Developer API &amp; Admin</div>
+                <a href="/api/v1/" class="nav-link" target="_blank">
+                    <span class="nav-icon">⚡</span>
+                    <span>REST API V1</span>
+                </a>
+                <a href="/admin/" class="nav-link" target="_blank">
+                    <span class="nav-icon">🛠️</span>
+                    <span>Django Admin</span>
+                </a>
+-->
+                <div class="nav-category">Universe Stats</div>
+                <div style="padding: 0.5rem 0.85rem; background: rgba(15, 23, 42, 0.7); border-radius: 8px; border: 1px solid var(--border-color); margin: 0 0.5rem;">
+                    <div style="display: flex; justify-content: space-between; font-size: 0.78rem; margin-bottom: 0.35rem;">
+                        <span class="text-secondary">Monitored Stocks:</span>
+                        <span class="font-mono" style="font-weight: 700; color: #fff;">{{ UNIVERSE_TOTAL_COUNT }}</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; font-size: 0.78rem;">
+                        <span class="text-secondary">Ranked Today:</span>
+                        <span class="font-mono text-positive" style="font-weight: 700;">{{ RANKED_TODAY_COUNT }}</span>
+                    </div>
+                </div>
+            </nav>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="app-main">
+            <!-- Top Navbar -->
+            <header class="top-navbar">
+                <!-- Dynamic Market Indices Ticker -->
+                <div class="ticker-bar" id="liveTickerBar">
+                    {% for idx in LIVE_INDICES %}
+                    <div class="ticker-chip" id="ticker-chip-{{ idx.symbol|slugify }}">
+                        <span class="name">{{ idx.name }}</span>
+                        <span class="val {% if idx.is_positive %}text-positive{% else %}text-negative{% endif %}" id="ticker-val-{{ idx.symbol|slugify }}">{{ idx.value|floatformat:2 }}</span>
+                        <span class="{% if idx.is_positive %}text-positive{% else %}text-negative{% endif %}" style="font-size: 0.75rem;" id="ticker-pct-{{ idx.symbol|slugify }}">
+                            {% if idx.is_positive %}+{% endif %}{{ idx.change_pct|floatformat:2 }}%
+                        </span>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                    <!-- Real-Time Exchange Sync Button -->
+                    <button id="btnSyncMarket" class="btn-secondary" style="padding: 0.4rem 0.85rem; font-size: 0.78rem; display: flex; align-items: center; gap: 0.4rem; white-space: nowrap;" title="Synchronize with live NSE/BSE exchange quotes">
+                        <span id="syncSpinIcon" style="display: inline-block;">🔄</span>
+                        <span id="syncBtnText">Sync Live Feeds</span>
+                    </button>
+
+                    <!-- Global Search -->
+                    <div class="search-wrapper">
+                        <span class="search-icon">🔍</span>
+                        <input type="text" id="globalSearchInput" class="search-input" placeholder="Search NSE/BSE ticker, e.g. RELIANCE, TCS..." autocomplete="off">
+                        <div id="globalSearchDropdown" class="search-dropdown"></div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Page Content -->
+            <div class="content-wrapper">
+                {% block content %}{% endblock %}
+            </div>
+
+            <!-- Compliance Footer -->
+            <footer class="compliance-disclaimer">
+                {{ COMPLIANCE_DISCLAIMER }}
+            </footer>
+        </main>
+    </div>
+
+    <!-- Scripts -->
+    <script src="{% static 'js/app.js' %}"></script>
+    {% block extra_scripts %}{% endblock %}
+</body>
+</html>

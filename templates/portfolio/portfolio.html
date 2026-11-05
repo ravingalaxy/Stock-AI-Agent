@@ -1,0 +1,474 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Portfolio Management & Risk Monitoring - AI Stock Research Agent{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 1rem;">
+    <div>
+        <h1 style="font-size: 1.75rem; font-weight: 800; color: #fff; letter-spacing: -0.02em;">Portfolio Tools & Risk Monitoring</h1>
+        <p class="text-secondary" style="font-size: 0.9rem;">Track current holdings, sector allocations, concentration risk limits, position sizing & stop losses</p>
+    </div>
+    <div>
+        <span class="score-badge score-high" style="font-size: 0.85rem; padding: 0.35rem 0.75rem;">
+            Risk Rules: Max 20% Stock | Max 30% Sector
+        </span>
+    </div>
+</div>
+
+<!-- Concentration Alerts -->
+{% if alerts %}
+<div style="margin-bottom: 1.5rem; display: flex; flex-direction: column; gap: 0.75rem;">
+    {% for a in alerts %}
+    <div style="padding: 1rem 1.25rem; border-radius: 8px; display: flex; align-items: flex-start; gap: 0.85rem; border: 1px solid {% if a.level == 'CRITICAL' %}rgba(244, 63, 94, 0.4){% else %}rgba(245, 158, 11, 0.4){% endif %}; background: {% if a.level == 'CRITICAL' %}rgba(244, 63, 94, 0.1){% else %}rgba(245, 158, 11, 0.1){% endif %};">
+        <span style="font-size: 1.25rem;">{% if a.level == 'CRITICAL' %}🚨{% else %}⚠️{% endif %}</span>
+        <div>
+            <div style="font-weight: 700; color: {% if a.level == 'CRITICAL' %}#f43f5e{% else %}#fbbf24{% endif %}; font-size: 0.9rem;">
+                {{ a.title }}
+            </div>
+            <div style="font-size: 0.82rem; color: var(--text-secondary); margin-top: 0.2rem;">
+                {{ a.message }}
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<!-- Portfolio KPIs Grid -->
+<div class="kpi-grid">
+    <div class="kpi-card" style="border-top-color: #3b82f6;">
+        <div class="kpi-label">Current Portfolio Value</div>
+        <div class="kpi-value">₹{{ total_current|floatformat:0 }}</div>
+        <div class="kpi-delta text-secondary">Holdings: {{ holdings_count }} stocks</div>
+    </div>
+    <div class="kpi-card" style="border-top-color: #64748b;">
+        <div class="kpi-label">Total Capital Invested</div>
+        <div class="kpi-value font-mono">₹{{ total_invested|floatformat:0 }}</div>
+        <div class="kpi-delta text-secondary">Initial purchase cost</div>
+    </div>
+    <div class="kpi-card" style="border-top-color: {% if total_pnl >= 0 %}#10b981{% else %}#f43f5e{% endif %};">
+        <div class="kpi-label">Total Profit & Loss (P&L)</div>
+        <div class="kpi-value {% if total_pnl >= 0 %}text-positive{% else %}text-negative{% endif %}">
+            {% if total_pnl >= 0 %}+{% endif %}₹{{ total_pnl|floatformat:0 }}
+        </div>
+        <div class="kpi-delta {% if total_pnl >= 0 %}text-positive{% else %}text-negative{% endif %}" style="font-weight: 700;">
+            {% if total_pnl >= 0 %}▲ +{% else %}▼ {% endif %}{{ total_pnl_pct|floatformat:2 }}%
+        </div>
+    </div>
+    <div class="kpi-card" style="border-top-color: #10b981;">
+        <div class="kpi-label">Risk Profile</div>
+        <div class="kpi-value text-positive" style="font-size: 1.25rem;">Active Monitoring</div>
+        <div class="kpi-delta text-secondary">Stop-loss risk tools active</div>
+    </div>
+</div>
+
+<!-- Holdings Table & Sector Chart Row -->
+<div style="display: grid; grid-template-columns: 2fr 1.1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
+    <!-- Holdings Table -->
+    <div class="fin-card" style="margin-bottom: 0;">
+        <div class="fin-card-header">
+            <div class="fin-card-title">
+                <span>📋</span>
+                <span>Tracked Holdings</span>
+            </div>
+            <span class="text-secondary font-mono" style="font-size: 0.8rem;">Live P&L Updated</span>
+        </div>
+        <div class="fin-table-container">
+            <table class="fin-table">
+                <thead>
+                    <tr>
+                        <th>Stock</th>
+                        <th>Sector</th>
+                        <th>Qty</th>
+                        <th>Avg Buy (₹)</th>
+                        <th>LTP (₹)</th>
+                        <th>Weight</th>
+                        <th>Current Val (₹)</th>
+                        <th>P&L (₹)</th>
+                        <th>P&L (%)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for h in holdings %}
+                    <tr>
+                        <td>
+                            <a href="{% url 'research:stock_detail' h.symbol %}" style="color: #60a5fa; font-weight: 700; text-decoration: none;">
+                                {{ h.symbol }}
+                            </a>
+                        </td>
+                        <td class="text-secondary" style="font-size: 0.8rem;">{{ h.sector }}</td>
+                        <td class="font-mono">{{ h.quantity }}</td>
+                        <td class="font-mono">₹{{ h.buy_price|floatformat:2 }}</td>
+                        <td class="font-mono font-bold" style="color: #fff;">₹{{ h.current_price|floatformat:2 }}</td>
+                        <td>
+                            <span class="score-badge {% if h.weight_pct > 20 %}score-low{% elif h.weight_pct > 10 %}score-med{% else %}score-high{% endif %}" style="font-size: 0.78rem;">
+                                {{ h.weight_pct }}%
+                            </span>
+                        </td>
+                        <td class="font-mono">₹{{ h.current_value|floatformat:0 }}</td>
+                        <td class="font-mono {% if h.is_profit %}text-positive{% else %}text-negative{% endif %}" style="font-weight: 600;">
+                            {% if h.is_profit %}+{% endif %}₹{{ h.pnl_amount|floatformat:0 }}
+                        </td>
+                        <td class="font-mono {% if h.is_profit %}text-positive{% else %}text-negative{% endif %}" style="font-weight: 700;">
+                            {% if h.is_profit %}+{% endif %}{{ h.pnl_pct|floatformat:2 }}%
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="9" style="text-align: center; color: var(--text-muted); padding: 2rem;">No holdings added.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Sector Allocation Chart -->
+    <div class="fin-card" style="margin-bottom: 0;">
+        <div class="fin-card-header" style="flex-wrap: wrap; gap: 0.5rem;">
+            <div>
+                <div class="fin-card-title">
+                    <span>🥧</span>
+                    <span>Adjustable Sector Allocation</span>
+                </div>
+                <div style="font-size: 0.75rem; color: var(--text-muted);">Institutional limit: Max 30% per sector</div>
+            </div>
+            <div style="display: inline-flex; border: 1px solid var(--border-color); border-radius: 5px; overflow: hidden;">
+                <button type="button" class="chart-btn active" id="btnSectorDonut" style="border: none; border-radius: 0;" title="Donut View">🍩 Donut</button>
+                <button type="button" class="chart-btn" id="btnSectorBar" style="border: none; border-radius: 0; border-left: 1px solid var(--border-color);" title="Bar View">📊 Bar</button>
+            </div>
+        </div>
+        <div class="chart-canvas-wrapper" style="min-height: 250px; height: 260px; position: relative;" id="sectorChartWrapper">
+            <canvas id="sectorDonutChart"></canvas>
+        </div>
+        <div style="margin-top: 1rem; border-top: 1px solid var(--border-color); padding-top: 0.75rem; display: flex; flex-direction: column; gap: 0.4rem;">
+            {% for sec, sdata in sector_allocation.items %}
+            <div style="display: flex; justify-content: space-between; font-size: 0.8rem;">
+                <span class="text-secondary">{{ sec }}</span>
+                <span class="font-mono {% if sdata.weight_pct > 30 %}text-negative{% else %}text-positive{% endif %}" style="font-weight: 700;">
+                    {{ sdata.weight_pct }}% {% if sdata.weight_pct > 30 %}(Exceeds 30%){% endif %}
+                </span>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- Interactive Calculators Row -->
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
+    <!-- Position Size Calculator -->
+    <div class="fin-card">
+        <div class="fin-card-header">
+            <div class="fin-card-title">
+                <span>🧮</span>
+                <span>Position-Size Calculator</span>
+            </div>
+            <span class="text-secondary font-mono" style="font-size: 0.8rem;">Conservative: 5-10%</span>
+        </div>
+        <form id="posSizeForm" onsubmit="return false;" style="display: flex; flex-direction: column; gap: 1rem;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div>
+                    <label class="kpi-label">Total Portfolio Capital (₹)</label>
+                    <input type="number" id="pos_capital" class="fin-input" style="width: 100%;" value="1000000">
+                </div>
+                <div>
+                    <label class="kpi-label">Stock Entry Price (₹)</label>
+                    <input type="number" id="pos_entry" class="fin-input" style="width: 100%;" value="1500">
+                </div>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div>
+                    <label class="kpi-label">Risk Profile</label>
+                    <select id="pos_profile" class="fin-select" style="width: 100%;">
+                        <option value="conservative">Conservative (5–10% Allocation)</option>
+                        <option value="aggressive">Capital-at-Risk Model</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="kpi-label">Stop-Loss Price (Optional, ₹)</label>
+                    <input type="number" id="pos_sl" class="fin-input" style="width: 100%;" value="1410">
+                </div>
+            </div>
+            <button type="button" id="calcPosBtn" class="btn-primary" style="margin-top: 0.5rem;">Calculate Optimal Size</button>
+        </form>
+
+        <!-- Position Results Box -->
+        <div id="posResultsBox" style="margin-top: 1.25rem; background: var(--bg-input); padding: 1rem; border-radius: 8px; border: 1px solid var(--border-color); display: none;">
+            <div style="font-weight: 700; color: #fff; margin-bottom: 0.5rem;">Recommended Position Allocation:</div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 0.35rem;">
+                <span class="text-secondary">Recommended Quantity:</span>
+                <span id="pos_rec_shares" class="font-mono text-positive" style="font-weight: 700;">-</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 0.35rem;">
+                <span class="text-secondary">Total Investment:</span>
+                <span id="pos_rec_inr" class="font-mono" style="color: #fff;">-</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 0.35rem;">
+                <span class="text-secondary">Portfolio Weight:</span>
+                <span id="pos_rec_weight" class="font-mono text-positive">-</span>
+            </div>
+            <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 0.5rem; line-height: 1.4;">
+                *Risk Rule: Maximum 5-10% position size per stock for conservative users. Never allocate more than 20% to any single stock.
+            </div>
+        </div>
+    </div>
+
+    <!-- Stop Loss & Target Price Calculator -->
+    <div class="fin-card">
+        <div class="fin-card-header">
+            <div class="fin-card-title">
+                <span>🎯</span>
+                <span>Stop-Loss & Target-Price Calculator</span>
+            </div>
+            <span class="text-secondary font-mono" style="font-size: 0.8rem;">Risk/Reward 1:2</span>
+        </div>
+        <form id="slTargetForm" onsubmit="return false;" style="display: flex; flex-direction: column; gap: 1rem;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div>
+                    <label class="kpi-label">Entry Price (₹)</label>
+                    <input type="number" id="sl_entry" class="fin-input" style="width: 100%;" value="2500">
+                </div>
+                <div>
+                    <label class="kpi-label">Stop-Loss Risk (%)</label>
+                    <input type="number" step="0.5" id="sl_pct" class="fin-input" style="width: 100%;" value="6.0">
+                </div>
+            </div>
+            <div>
+                <label class="kpi-label">Target Risk/Reward Ratio</label>
+                <select id="sl_rr" class="fin-select" style="width: 100%;">
+                    <option value="1.5">1 : 1.5 (Conservative Target)</option>
+                    <option value="2.0" selected>1 : 2.0 (Standard Target)</option>
+                    <option value="3.0">1 : 3.0 (Trend Following Target)</option>
+                </select>
+            </div>
+            <button type="button" id="calcSlBtn" class="btn-primary" style="margin-top: 0.5rem;">Compute Execution Levels</button>
+        </form>
+
+        <!-- SL & Target Results Box -->
+        <div id="slResultsBox" style="margin-top: 1.25rem; background: var(--bg-input); padding: 1rem; border-radius: 8px; border: 1px solid var(--border-color); display: none;">
+            <div style="font-weight: 700; color: #fff; margin-bottom: 0.5rem;">Calculated Risk-Reward Levels:</div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 0.35rem;">
+                <span class="text-secondary">Stop-Loss Price:</span>
+                <span id="res_sl_price" class="font-mono text-negative" style="font-weight: 700;">-</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 0.35rem;">
+                <span class="text-secondary">Target Price:</span>
+                <span id="res_target_price" class="font-mono text-positive" style="font-weight: 700;">-</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 0.35rem;">
+                <span class="text-secondary">Expected Return at Target:</span>
+                <span id="res_target_pct" class="font-mono text-positive">-</span>
+            </div>
+            <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 0.5rem; line-height: 1.4;">
+                *Notice: Use stop-losses only as risk-management tools, not guaranteed execution protection in volatile or gap-down market conditions.
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Rebalancing Suggestions -->
+{% if rebalancing_suggestions %}
+<div class="fin-card">
+    <div class="fin-card-header">
+        <div class="fin-card-title">
+            <span>⚖️</span>
+            <span>Suggested Portfolio Rebalancing Actions</span>
+        </div>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+        {% for r in rebalancing_suggestions %}
+        <div style="padding: 0.85rem 1rem; background: var(--bg-input); border-radius: 8px; border: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+            <div>
+                <span style="font-weight: 700; color: #fff;">{{ r.symbol }}</span>
+                <span class="action-badge {% if r.action == 'TRIM' %}action-avoid{% else %}action-watch{% endif %}" style="margin-left: 0.5rem;">
+                    {{ r.action }}
+                </span>
+                <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.2rem;">
+                    {{ r.reason }}
+                </div>
+            </div>
+            {% if r.shares > 0 %}
+            <div class="font-mono text-negative" style="font-weight: 700;">
+                Trim {{ r.shares }} shares
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // Sector Allocation Chart (Dynamic Donut & Bar toggle)
+    const ctx = document.getElementById('sectorDonutChart');
+    if (ctx) {
+        const labels = JSON.parse('{{ sector_labels_json|escapejs }}');
+        const weights = JSON.parse('{{ sector_weights_json|escapejs }}');
+        const colors = [
+            '#3b82f6', '#10b981', '#f59e0b', '#06b6d4',
+            '#8b5cf6', '#ec4899', '#f97316', '#64748b'
+        ];
+
+        let currentType = 'doughnut';
+        let sectorChart = createSectorChart(currentType);
+
+        function createSectorChart(type) {
+            const isBar = type === 'bar';
+            return new Chart(ctx, {
+                type: type,
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Portfolio Weight (%)',
+                        data: weights,
+                        backgroundColor: colors.slice(0, labels.length),
+                        borderColor: '#0f172a',
+                        borderWidth: 2,
+                        borderRadius: isBar ? 4 : 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    indexAxis: isBar ? 'y' : 'x',
+                    plugins: {
+                        legend: {
+                            display: !isBar,
+                            position: 'bottom',
+                            labels: { color: '#94a3b8', font: { family: 'JetBrains Mono', size: 10 } }
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(15, 23, 42, 0.95)',
+                            titleColor: '#94a3b8',
+                            bodyColor: '#f8fafc',
+                            borderColor: '#334155',
+                            borderWidth: 1,
+                            callbacks: {
+                                label: function(context) {
+                                    const val = context.raw || 0;
+                                    const alert = val > 30 ? ' (⚠️ Exceeds 30% Limit)' : '';
+                                    return ` ${val.toFixed(1)}% weight${alert}`;
+                                }
+                            }
+                        }
+                    },
+                    scales: isBar ? {
+                        x: {
+                            grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                            ticks: { color: '#94a3b8', callback: v => v + '%' },
+                            max: Math.max(35, Math.max(...weights) + 5)
+                        },
+                        y: {
+                            grid: { display: false },
+                            ticks: { color: '#94a3b8', font: { family: 'Inter', size: 11 } }
+                        }
+                    } : {
+                        x: { display: false },
+                        y: { display: false }
+                    }
+                }
+            });
+        }
+
+        const btnDonut = document.getElementById('btnSectorDonut');
+        const btnBar = document.getElementById('btnSectorBar');
+
+        if (btnDonut && btnBar) {
+            btnDonut.addEventListener('click', () => {
+                if (currentType === 'doughnut') return;
+                currentType = 'doughnut';
+                btnDonut.classList.add('active');
+                btnBar.classList.remove('active');
+                sectorChart.destroy();
+                sectorChart = createSectorChart('doughnut');
+            });
+
+            btnBar.addEventListener('click', () => {
+                if (currentType === 'bar') return;
+                currentType = 'bar';
+                btnBar.classList.add('active');
+                btnDonut.classList.remove('active');
+                sectorChart.destroy();
+                sectorChart = createSectorChart('bar');
+            });
+        }
+
+        window.addEventListener('resize', () => {
+            if (sectorChart) sectorChart.resize();
+        });
+    }
+
+    // Position Size AJAX
+    const calcPosBtn = document.getElementById('calcPosBtn');
+    if (calcPosBtn) {
+        calcPosBtn.addEventListener('click', () => {
+            const capital = parseFloat(document.getElementById('pos_capital').value) || 1000000;
+            const entry = parseFloat(document.getElementById('pos_entry').value) || 1000;
+            const profile = document.getElementById('pos_profile').value;
+            const sl = parseFloat(document.getElementById('pos_sl').value) || 0;
+
+            fetch('/portfolio/api/position-size/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify({
+                    capital: capital,
+                    entry_price: entry,
+                    risk_profile: profile,
+                    stop_loss: sl
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.recommended_shares !== undefined) {
+                    document.getElementById('pos_rec_shares').textContent = `${data.recommended_shares} shares`;
+                    document.getElementById('pos_rec_inr').textContent = `₹${data.recommended_investment.toLocaleString('en-IN')}`;
+                    document.getElementById('pos_rec_weight').textContent = `${data.portfolio_weight_pct}% of Portfolio`;
+                    document.getElementById('posResultsBox').style.display = 'block';
+                }
+            })
+            .catch(err => console.error(err));
+        });
+    }
+
+    // Stop Loss & Target AJAX
+    const calcSlBtn = document.getElementById('calcSlBtn');
+    if (calcSlBtn) {
+        calcSlBtn.addEventListener('click', () => {
+            const entry = parseFloat(document.getElementById('sl_entry').value) || 1000;
+            const sl_pct = parseFloat(document.getElementById('sl_pct').value) || 6.0;
+            const rr = parseFloat(document.getElementById('sl_rr').value) || 2.0;
+
+            fetch('/portfolio/api/stop-loss/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify({
+                    entry_price: entry,
+                    stop_loss_pct: sl_pct,
+                    risk_reward_ratio: rr
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.stop_loss_price !== undefined) {
+                    document.getElementById('res_sl_price').textContent = `₹${data.stop_loss_price.toFixed(2)} (-${data.stop_loss_pct}%)`;
+                    document.getElementById('res_target_price').textContent = `₹${data.target_price.toFixed(2)}`;
+                    document.getElementById('res_target_pct').textContent = `+${data.target_gain_pct}% (R:R ${data.risk_reward_ratio})`;
+                    document.getElementById('slResultsBox').style.display = 'block';
+                }
+            })
+            .catch(err => console.error(err));
+        });
+    }
+});
+</script>
+{% endblock %}

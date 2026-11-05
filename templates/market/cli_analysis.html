@@ -1,0 +1,909 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}CLI & Batch Analysis Engine - StockAgent AI{% endblock %}
+
+{% block extra_head %}
+<style>
+    .terminal-container {
+        background: #090d16;
+        border: 1px solid rgba(51, 65, 85, 0.6);
+        border-radius: 8px;
+        font-family: 'JetBrains Mono', 'Consolas', monospace;
+        font-size: 0.82rem;
+        color: #e2e8f0;
+        box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.6);
+        position: relative;
+        overflow: hidden;
+    }
+    .terminal-header {
+        background: #0f172a;
+        padding: 0.6rem 1rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 1px solid rgba(51, 65, 85, 0.5);
+    }
+    .terminal-dots {
+        display: flex;
+        gap: 6px;
+    }
+    .terminal-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+    }
+    .terminal-body {
+        height: 420px;
+        max-height: 550px;
+        overflow-y: auto;
+        padding: 1rem 1.25rem;
+        line-height: 1.6;
+        white-space: pre-wrap;
+        word-break: break-all;
+    }
+    .terminal-line {
+        margin-bottom: 0.2rem;
+    }
+    .terminal-line.cmd {
+        color: #38bdf8;
+        font-weight: 700;
+    }
+    .terminal-line.info {
+        color: #94a3b8;
+    }
+    .terminal-line.success {
+        color: #10b981;
+        font-weight: 600;
+    }
+    .terminal-line.warn {
+        color: #fbbf24;
+    }
+    .terminal-line.err {
+        color: #f43f5e;
+        font-weight: 600;
+    }
+    .pulse-dot {
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background-color: #10b981;
+        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+        animation: pulse 1.6s infinite cubic-bezier(0.66, 0, 0, 1);
+    }
+    @keyframes pulse {
+        to {
+            box-shadow: 0 0 0 10px rgba(16, 185, 129, 0);
+        }
+    }
+    .preset-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        padding: 0.4rem 0.85rem;
+        background: rgba(30, 41, 59, 0.6);
+        border: 1px solid rgba(51, 65, 85, 0.8);
+        border-radius: 20px;
+        font-size: 0.78rem;
+        color: #94a3b8;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        text-decoration: none;
+    }
+    .preset-pill:hover, .preset-pill.active {
+        background: rgba(37, 99, 235, 0.2);
+        border-color: #38bdf8;
+        color: #f8fafc;
+        transform: translateY(-1px);
+    }
+    .cmd-preview-box {
+        background: rgba(15, 23, 42, 0.9);
+        border: 1px solid #1e293b;
+        border-left: 4px solid #38bdf8;
+        padding: 0.75rem 1rem;
+        border-radius: 6px;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.82rem;
+        color: #38bdf8;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    .filter-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 1rem;
+        margin-bottom: 1.25rem;
+    }
+    .filter-group label {
+        display: block;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #94a3b8;
+        margin-bottom: 0.4rem;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+    }
+    .filter-group select, .filter-group input {
+        width: 100%;
+        background: #0f172a;
+        border: 1px solid #334155;
+        border-radius: 6px;
+        padding: 0.55rem 0.75rem;
+        font-size: 0.85rem;
+        color: #f8fafc;
+        outline: none;
+        transition: border-color 0.2s;
+    }
+    .filter-group select:focus, .filter-group input:focus {
+        border-color: #38bdf8;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Executive Header -->
+<div style="margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 1rem;">
+    <div>
+        <div style="display: flex; align-items: center; gap: 0.75rem;">
+            <div style="font-size: 1.75rem;">🖥️</div>
+            <div>
+                <h1 style="font-size: 1.75rem; font-weight: 800; color: #fff; letter-spacing: -0.02em; margin: 0;">CLI &amp; Batch Analysis Engine</h1>
+                <p class="text-secondary" style="font-size: 0.88rem; margin: 0.25rem 0 0 0;">
+                    Interactive web console for executing <code style="color: #38bdf8; font-family: var(--font-mono);">python -m src.main</code> pipelines with live streaming logs
+                </p>
+            </div>
+        </div>
+    </div>
+    <div style="display: flex; align-items: center; gap: 0.75rem;">
+        <span class="badge" style="background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3);">
+            Python 3.12 Engine Ready
+        </span>
+    </div>
+</div>
+
+<!-- Quick 1-Click Command Presets -->
+<div class="fin-card" style="padding: 0.85rem 1.25rem; margin-bottom: 1.5rem;">
+    <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+        <span style="font-size: 0.78rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em;">
+            Quick Presets:
+        </span>
+        <button type="button" class="preset-pill active" onclick="applyPreset('bse500_60')">
+            🚀 <strong>Analyze BSE 500 (Top 60)</strong>
+        </button>
+        <button type="button" class="preset-pill" onclick="applyPreset('nifty500_50')">
+            ⚡ Analyze NIFTY 500 (Top 50)
+        </button>
+        <button type="button" class="preset-pill" onclick="applyPreset('bse500_universe')">
+            🏗️ Build BSE 500 Universe
+        </button>
+        <button type="button" class="preset-pill" onclick="applyPreset('tech_sector')">
+            🏢 Technology Sector (Top 20)
+        </button>
+        <button type="button" class="preset-pill" onclick="applyPreset('update_data')">
+            🔄 Update 2Y Market Data
+        </button>
+        <button type="button" class="preset-pill" onclick="applyPreset('backtest')">
+            📈 Quant Backtest (1Y)
+        </button>
+    </div>
+</div>
+
+<!-- Command Configuration & Parameter Filters Card -->
+<div class="fin-card" style="margin-bottom: 1.5rem;">
+    <div class="fin-card-header">
+        <div class="fin-card-title">
+            <span>⚙️</span>
+            <span>CLI Command &amp; Filter Parameters</span>
+        </div>
+        <span style="font-size: 0.75rem; color: var(--text-muted);">Configures arguments for Typer entrypoint</span>
+    </div>
+    
+    <form id="cliForm" onsubmit="event.preventDefault(); runCliCommand();">
+        <div class="filter-grid">
+            <!-- Command Action -->
+            <div class="filter-group">
+                <label for="cliCommand">Command Action</label>
+                <select id="cliCommand" onchange="onCommandChange()">
+                    <option value="analyze" selected>analyze (Full Ranking Pipeline)</option>
+                    <option value="build_universe">build_universe (Build Stock Universe)</option>
+                    <option value="update_data">update_data (Fetch OHLCV &amp; Fundamentals)</option>
+                    <option value="backtest">backtest (Point-in-Time Backtest)</option>
+                </select>
+            </div>
+
+            <!-- Universe Index -->
+            <div class="filter-group" id="groupIndex">
+                <label for="cliIndex">Universe Index (--index)</label>
+                <select id="cliIndex" onchange="updatePreview()">
+                    <option value="bse500" selected>bse500 (BSE 500 Equities)</option>
+                    <option value="nifty500">nifty500 (Nifty 500 Equities)</option>
+                    <option value="nifty50">nifty50 (Nifty 50 Large-Caps)</option>
+                    <option value="custom">custom (Manual Symbols)</option>
+                </select>
+            </div>
+
+            <!-- Top N Stocks -->
+            <div class="filter-group" id="groupTop">
+                <label for="cliTop">Top Stocks to Analyze (--top)</label>
+                <input type="number" id="cliTop" value="60" min="1" max="500" oninput="updatePreview()">
+            </div>
+
+            <!-- Sector Filter -->
+            <div class="filter-group" id="groupSector">
+                <label for="cliSector">Sector Filter (--sector)</label>
+                <select id="cliSector" onchange="updatePreview()">
+                    <option value="">All Sectors (No Filter)</option>
+                    {% for sec in sectors %}
+                    <option value="{{ sec }}">{{ sec }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Min Market Cap (Cr) -->
+            <div class="filter-group" id="groupMinMcap">
+                <label for="cliMinMcap">Min Market Cap ₹ Cr (--min-market-cap)</label>
+                <input type="number" id="cliMinMcap" placeholder="Optional (e.g. 1000)" oninput="updatePreview()">
+            </div>
+
+            <!-- Custom Symbols -->
+            <div class="filter-group" id="groupCustomSymbols">
+                <label for="cliCustomSymbols">Custom Symbols (--custom-symbols)</label>
+                <input type="text" id="cliCustomSymbols" placeholder="e.g. RELIANCE, TCS, INFY" oninput="updatePreview()">
+            </div>
+            
+            <!-- Output Directory -->
+            <div class="filter-group" id="groupOutputDir">
+                <label for="cliOutputDir">Report Output Dir (--output-dir)</label>
+                <input type="text" id="cliOutputDir" value="data/reports" oninput="updatePreview()">
+            </div>
+
+            <!-- Backtest Specific: Dates -->
+            <div class="filter-group" id="groupBacktestDates" style="display: none;">
+                <label>Backtest Window (Start / End)</label>
+                <div style="display: flex; gap: 0.5rem;">
+                    <input type="date" id="btStart" value="2024-01-01" onchange="updatePreview()" style="width: 50%;">
+                    <input type="date" id="btEnd" value="2024-12-31" onchange="updatePreview()" style="width: 50%;">
+                </div>
+            </div>
+
+            <!-- Update Data Specific: Symbols -->
+            <div class="filter-group" id="groupUpdateSymbols" style="display: none;">
+                <label for="upSymbols">Symbols to Update (--symbols)</label>
+                <input type="text" id="upSymbols" value="RELIANCE, TCS, INFY" oninput="updatePreview()">
+            </div>
+        </div>
+
+        <!-- Real-Time Command Line Preview -->
+        <div style="margin-bottom: 1.25rem;">
+            <div style="font-size: 0.72rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; margin-bottom: 0.35rem;">
+                Exact CLI Command Preview
+            </div>
+            <div class="cmd-preview-box">
+                <div style="display: flex; align-items: center; gap: 0.5rem; overflow-x: auto;">
+                    <span style="color: #64748b;">$</span>
+                    <span id="cmdPreviewText">.venv\Scripts\python -m src.main analyze --index bse500 --top 60</span>
+                </div>
+                <button type="button" class="btn-secondary" onclick="copyCommand()" style="font-size: 0.72rem; padding: 0.25rem 0.6rem; white-space: nowrap; margin-left: 1rem;">
+                    📋 Copy
+                </button>
+            </div>
+        </div>
+
+        <!-- Action Control Buttons -->
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+            <div style="display: flex; gap: 0.75rem;">
+                <button type="button" id="btnRun" class="btn-primary" onclick="runCliCommand()" style="background: #10b981; border-color: #10b981; font-weight: 700; padding: 0.65rem 1.4rem;">
+                    <span id="btnRunIcon">▶</span> <span id="btnRunText">Run CLI Analysis</span>
+                </button>
+                <button type="button" id="btnStop" class="btn-secondary" onclick="stopCliCommand()" disabled style="color: #f43f5e; border-color: rgba(244, 63, 94, 0.4); opacity: 0.5;">
+                    ⏹ Stop Execution
+                </button>
+                <button type="button" class="btn-secondary" onclick="clearConsole()">
+                    🧹 Clear Console
+                </button>
+            </div>
+            <div>
+                <a href="#downwardOutputWindow" class="btn-secondary" style="font-size: 0.8rem; text-decoration: none;">
+                    ⬇ Jump to Output Console
+                </a>
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- DOWNWARD CARD WINDOW: The Output & Processing Monitor Window -->
+<div id="downwardOutputWindow" class="fin-card" style="border-top: 3px solid #38bdf8; scroll-margin-top: 2rem;">
+    <div class="fin-card-header" style="flex-wrap: wrap; gap: 0.75rem;">
+        <div style="display: flex; align-items: center; gap: 0.75rem;">
+            <div class="fin-card-title">
+                <span>💻</span>
+                <span>Live Execution Console &amp; Processing Window</span>
+            </div>
+            <!-- Live Status Pill -->
+            <div id="statusBadge" style="display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.75rem; padding: 0.2rem 0.65rem; border-radius: 12px; background: rgba(51, 65, 85, 0.4); color: #94a3b8; border: 1px solid rgba(51, 65, 85, 0.6);">
+                <span id="statusDot" style="width: 7px; height: 7px; border-radius: 50%; background: #64748b;"></span>
+                <span id="statusText">IDLE</span>
+            </div>
+        </div>
+
+        <!-- Telemetry Metrics & Tools -->
+        <div style="display: flex; align-items: center; gap: 1rem; font-size: 0.78rem; font-family: var(--font-mono);">
+            <div style="color: var(--text-muted);">
+                PID: <span id="telemetryPid" style="color: #fff; font-weight: 600;">--</span>
+            </div>
+            <div style="color: var(--text-muted);">
+                Elapsed: <span id="telemetryTimer" style="color: #38bdf8; font-weight: 600;">00:00:00</span>
+            </div>
+            <label style="display: flex; align-items: center; gap: 0.35rem; color: #94a3b8; cursor: pointer; user-select: none;">
+                <input type="checkbox" id="autoScrollCheck" checked> Auto-Scroll
+            </label>
+            <button type="button" class="btn-secondary" onclick="downloadConsoleLog()" style="font-size: 0.72rem; padding: 0.2rem 0.5rem;">
+                💾 Save Log
+            </button>
+        </div>
+    </div>
+
+    <!-- Terminal Window Component -->
+    <div class="terminal-container">
+        <div class="terminal-header">
+            <div class="terminal-dots">
+                <div class="terminal-dot" style="background: #ef4444;"></div>
+                <div class="terminal-dot" style="background: #eab308;"></div>
+                <div class="terminal-dot" style="background: #10b981;"></div>
+            </div>
+            <div id="terminalCommandLabel" style="font-size: 0.72rem; color: #64748b; font-family: 'JetBrains Mono', monospace;">
+                Ready for instruction...
+            </div>
+            <div style="font-size: 0.7rem; color: #475569;">
+                STDOUT / STDERR
+            </div>
+        </div>
+
+        <div id="terminalBody" class="terminal-body">
+<span class="terminal-line info"># StockAgent AI Multi-Agent Institutional Pipeline</span>
+<span class="terminal-line info"># Ready to execute: .venv\Scripts\python -m src.main</span>
+<span class="terminal-line info"># Click "▶ Run CLI Analysis" above or choose a preset to start real-time processing.</span>
+        </div>
+    </div>
+
+    <!-- Generated Reports Deck (Dynamically populated when reports are created) -->
+    <div id="reportsDeck" style="margin-top: 1.25rem; display: none;">
+        <div style="font-size: 0.85rem; font-weight: 700; color: #f8fafc; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.5rem;">
+            <span>📁</span>
+            <span>Generated Pipeline Artifacts &amp; Watchlists</span>
+        </div>
+        <div id="reportsList" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem;">
+            <!-- Report Cards Injected via JavaScript -->
+        </div>
+    </div>
+</div>
+
+<!-- Historical / Existing Reports Card -->
+<div class="fin-card">
+    <div class="fin-card-header">
+        <div class="fin-card-title">
+            <span>📚</span>
+            <span>Recent Generated Reports Archive (<code style="font-family: var(--font-mono); font-size: 0.8rem;">data/reports/</code>)</span>
+        </div>
+        <span style="font-size: 0.75rem; color: var(--text-muted);">Previously generated watchlists &amp; PDFs</span>
+    </div>
+    {% if existing_reports %}
+    <div class="fin-table-container">
+        <table class="fin-table">
+            <thead>
+                <tr>
+                    <th>Type</th>
+                    <th>Report File Name</th>
+                    <th>Generated At</th>
+                    <th>File Size</th>
+                    <th style="text-align: right;">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in existing_reports %}
+                <tr>
+                    <td>
+                        <span class="badge" style="{% if r.suffix == 'PDF' %}background: rgba(244, 63, 94, 0.15); color: #f43f5e;{% elif r.suffix == 'CSV' %}background: rgba(16, 185, 129, 0.15); color: #10b981;{% else %}background: rgba(56, 189, 248, 0.15); color: #38bdf8;{% endif %}">
+                            {{ r.suffix }}
+                        </span>
+                    </td>
+                    <td class="font-mono" style="font-weight: 600; color: #fff;">
+                        {{ r.name }}
+                    </td>
+                    <td class="text-secondary" style="font-size: 0.8rem;">
+                        {{ r.mtime }}
+                    </td>
+                    <td class="text-secondary" style="font-size: 0.8rem;">
+                        {{ r.size_kb }} KB
+                    </td>
+                    <td style="text-align: right;">
+                        <a href="{{ r.url }}" target="_blank" class="btn-secondary" style="font-size: 0.72rem; padding: 0.25rem 0.6rem; text-decoration: none;">
+                            👁 View
+                        </a>
+                        <a href="{{ r.url }}?download=1" class="btn-secondary" style="font-size: 0.72rem; padding: 0.25rem 0.6rem; text-decoration: none; margin-left: 0.35rem;">
+                            ⬇ Download
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div style="padding: 2rem; text-align: center; color: var(--text-muted); font-size: 0.85rem;">
+        No reports generated yet. Execute a pipeline command above to generate Markdown, CSV, and PDF watchlists.
+    </div>
+    {% endif %}
+</div>
+
+<!-- SEBI Compliance Notice -->
+<div class="compliance-box" style="margin-top: 1.5rem;">
+    <div class="compliance-title">⚖️ SEBI Compliance &amp; Institutional Model Notice</div>
+    <div class="compliance-text">
+        Automated batch rankings generated by <code style="font-family: var(--font-mono);">src.main</code> are quantitative algorithmic outputs combining multi-factor scoring (Quality, Growth, Valuation, Momentum, Catalysts, Risk Penalty). These outputs are strictly for research, educational, and workflow evaluation purposes and do NOT constitute investment advice or registered SEBI financial advisory.
+    </div>
+</div>
+
+<script>
+    // State Variables
+    let currentJobId = null;
+    let pollInterval = null;
+    let timerInterval = null;
+    let currentOffset = 0;
+    let startTime = null;
+    let fullLogText = "";
+
+    // Presets handler
+    function applyPreset(preset) {
+        document.querySelectorAll('.preset-pill').forEach(el => el.classList.remove('active'));
+        if (event && event.currentTarget) event.currentTarget.classList.add('active');
+
+        const cmdSelect = document.getElementById('cliCommand');
+        const indexSelect = document.getElementById('cliIndex');
+        const topInput = document.getElementById('cliTop');
+        const sectorSelect = document.getElementById('cliSector');
+        const minMcapInput = document.getElementById('cliMinMcap');
+        const customInput = document.getElementById('cliCustomSymbols');
+
+        // Reset fields
+        sectorSelect.value = "";
+        minMcapInput.value = "";
+        customInput.value = "";
+
+        if (preset === 'bse500_60') {
+            cmdSelect.value = 'analyze';
+            indexSelect.value = 'bse500';
+            topInput.value = 60;
+        } else if (preset === 'nifty500_50') {
+            cmdSelect.value = 'analyze';
+            indexSelect.value = 'nifty500';
+            topInput.value = 50;
+        } else if (preset === 'bse500_universe') {
+            cmdSelect.value = 'build_universe';
+            indexSelect.value = 'bse500';
+        } else if (preset === 'tech_sector') {
+            cmdSelect.value = 'analyze';
+            indexSelect.value = 'bse500';
+            topInput.value = 20;
+            // Select Technology if present
+            for (let i = 0; i < sectorSelect.options.length; i++) {
+                if (sectorSelect.options[i].text.toLowerCase().includes('tech')) {
+                    sectorSelect.selectedIndex = i;
+                    break;
+                }
+            }
+        } else if (preset === 'update_data') {
+            cmdSelect.value = 'update_data';
+        } else if (preset === 'backtest') {
+            cmdSelect.value = 'backtest';
+            indexSelect.value = 'nifty500';
+        }
+
+        onCommandChange();
+        updatePreview();
+    }
+
+    // Toggle visibility depending on command action
+    function onCommandChange() {
+        const cmd = document.getElementById('cliCommand').value;
+        const groupIndex = document.getElementById('groupIndex');
+        const groupTop = document.getElementById('groupTop');
+        const groupSector = document.getElementById('groupSector');
+        const groupMinMcap = document.getElementById('groupMinMcap');
+        const groupCustomSymbols = document.getElementById('groupCustomSymbols');
+        const groupOutputDir = document.getElementById('groupOutputDir');
+        const groupBacktestDates = document.getElementById('groupBacktestDates');
+        const groupUpdateSymbols = document.getElementById('groupUpdateSymbols');
+
+        if (cmd === 'analyze') {
+            groupIndex.style.display = 'block';
+            groupTop.style.display = 'block';
+            groupSector.style.display = 'block';
+            groupMinMcap.style.display = 'block';
+            groupCustomSymbols.style.display = 'block';
+            groupOutputDir.style.display = 'block';
+            groupBacktestDates.style.display = 'none';
+            groupUpdateSymbols.style.display = 'none';
+        } else if (cmd === 'build_universe') {
+            groupIndex.style.display = 'block';
+            groupTop.style.display = 'none';
+            groupSector.style.display = 'none';
+            groupMinMcap.style.display = 'none';
+            groupCustomSymbols.style.display = 'block';
+            groupOutputDir.style.display = 'none';
+            groupBacktestDates.style.display = 'none';
+            groupUpdateSymbols.style.display = 'none';
+        } else if (cmd === 'update_data') {
+            groupIndex.style.display = 'none';
+            groupTop.style.display = 'none';
+            groupSector.style.display = 'none';
+            groupMinMcap.style.display = 'none';
+            groupCustomSymbols.style.display = 'none';
+            groupOutputDir.style.display = 'none';
+            groupBacktestDates.style.display = 'none';
+            groupUpdateSymbols.style.display = 'block';
+        } else if (cmd === 'backtest') {
+            groupIndex.style.display = 'block';
+            groupTop.style.display = 'block';
+            groupSector.style.display = 'none';
+            groupMinMcap.style.display = 'none';
+            groupCustomSymbols.style.display = 'none';
+            groupOutputDir.style.display = 'none';
+            groupBacktestDates.style.display = 'block';
+            groupUpdateSymbols.style.display = 'none';
+        }
+        updatePreview();
+    }
+
+    // Update real-time command preview string
+    function updatePreview() {
+        const cmd = document.getElementById('cliCommand').value;
+        let str = `.venv\\Scripts\\python -m src.main ${cmd}`;
+
+        if (cmd === 'analyze') {
+            const idx = document.getElementById('cliIndex').value;
+            const top = document.getElementById('cliTop').value;
+            const sec = document.getElementById('cliSector').value;
+            const mcap = document.getElementById('cliMinMcap').value;
+            const custom = document.getElementById('cliCustomSymbols').value;
+            const outDir = document.getElementById('cliOutputDir').value;
+
+            str += ` --index ${idx} --top ${top || 60}`;
+            if (sec) str += ` --sector "${sec}"`;
+            if (mcap) str += ` --min-market-cap ${mcap}`;
+            if (custom) str += ` --custom-symbols "${custom}"`;
+            if (outDir && outDir !== 'data/reports') str += ` --output-dir ${outDir}`;
+        } else if (cmd === 'build_universe') {
+            const idx = document.getElementById('cliIndex').value;
+            const custom = document.getElementById('cliCustomSymbols').value;
+            str += ` --index ${idx}`;
+            if (custom) str += ` --custom-symbols "${custom}"`;
+        } else if (cmd === 'update_data') {
+            const sym = document.getElementById('upSymbols').value;
+            str += ` --symbols "${sym}" --period 2y`;
+        } else if (cmd === 'backtest') {
+            const idx = document.getElementById('cliIndex').value;
+            const top = document.getElementById('cliTop').value || 10;
+            const start = document.getElementById('btStart').value || '2024-01-01';
+            const end = document.getElementById('btEnd').value || '2024-12-31';
+            str += ` --start ${start} --end ${end} --index ${idx} --top-n ${top} --frequency M`;
+        }
+
+        document.getElementById('cmdPreviewText').textContent = str;
+    }
+
+    function copyCommand() {
+        const text = document.getElementById('cmdPreviewText').textContent;
+        navigator.clipboard.writeText(text).then(() => {
+            const btn = event.currentTarget;
+            const orig = btn.innerHTML;
+            btn.innerHTML = "✅ Copied!";
+            setTimeout(() => { btn.innerHTML = orig; }, 1800);
+        });
+    }
+
+    function clearConsole() {
+        document.getElementById('terminalBody').innerHTML = '<span class="terminal-line info"># Console cleared. Ready for next command.</span>';
+        fullLogText = "";
+    }
+
+    // Run Command via POST
+    async function runCliCommand() {
+        const btnRun = document.getElementById('btnRun');
+        const btnStop = document.getElementById('btnStop');
+        const cmd = document.getElementById('cliCommand').value;
+
+        // Build Payload
+        const payload = {
+            command: cmd,
+            index: document.getElementById('cliIndex').value,
+            top: document.getElementById('cliTop').value || 60,
+            sector: document.getElementById('cliSector').value,
+            min_market_cap: document.getElementById('cliMinMcap').value,
+            custom_symbols: document.getElementById('cliCustomSymbols').value,
+            output_dir: document.getElementById('cliOutputDir').value,
+            symbols: document.getElementById('upSymbols') ? document.getElementById('upSymbols').value : '',
+            start: document.getElementById('btStart') ? document.getElementById('btStart').value : '',
+            end: document.getElementById('btEnd') ? document.getElementById('btEnd').value : '',
+            top_n: document.getElementById('cliTop').value || 10
+        };
+
+        // Scroll to downward output window
+        document.getElementById('downwardOutputWindow').scrollIntoView({ behavior: 'smooth' });
+
+        // Update UI state to Running
+        btnRun.disabled = true;
+        btnRun.style.opacity = '0.7';
+        document.getElementById('btnRunText').textContent = 'Processing...';
+        btnStop.disabled = false;
+        btnStop.style.opacity = '1';
+
+        // Update Terminal Header & Status
+        updateStatus('running', 'RUNNING');
+        document.getElementById('terminalCommandLabel').textContent = document.getElementById('cmdPreviewText').textContent;
+        
+        // Reset console for new run
+        currentOffset = 0;
+        fullLogText = "";
+        startTime = Date.now();
+        startTimer();
+        
+        const term = document.getElementById('terminalBody');
+        term.innerHTML = `<span class="terminal-line cmd">$ ${document.getElementById('cmdPreviewText').textContent}</span>\n<span class="terminal-line info">[Initializing Multi-Agent Quant Subprocess...]</span>\n`;
+
+        document.getElementById('reportsDeck').style.display = 'none';
+        document.getElementById('reportsList').innerHTML = '';
+
+        try {
+            const csrfToken = getCookie('csrftoken');
+            const resp = await fetch('/cli-analysis/api/run/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken
+                },
+                body: JSON.stringify(payload)
+            });
+
+            const data = await resp.json();
+            if (data.status === 'started') {
+                currentJobId = data.job_id;
+                document.getElementById('telemetryPid').textContent = data.pid || '--';
+                // Start polling logs
+                pollInterval = setInterval(pollLogs, 450);
+            } else {
+                term.innerHTML += `<span class="terminal-line err">Error starting execution: ${data.error || 'Unknown error'}</span>\n`;
+                finishRun('failed');
+            }
+        } catch (e) {
+            term.innerHTML += `<span class="terminal-line err">Network error communicating with server: ${e}</span>\n`;
+            finishRun('failed');
+        }
+    }
+
+    // Poll live logs from backend
+    async function pollLogs() {
+        if (!currentJobId) return;
+
+        try {
+            const resp = await fetch(`/cli-analysis/api/status/${currentJobId}/?offset=${currentOffset}`);
+            const data = await resp.json();
+
+            if (data.logs && data.logs.length > 0) {
+                currentOffset = data.next_offset;
+                fullLogText += data.logs;
+                appendTerminalLines(data.logs);
+            }
+
+            // Check if reports detected
+            if (data.reports && data.reports.length > 0) {
+                renderReports(data.reports);
+            }
+
+            if (data.status === 'completed') {
+                clearInterval(pollInterval);
+                finishRun('completed', data.exit_code);
+            } else if (data.status === 'failed' || data.status === 'stopped') {
+                clearInterval(pollInterval);
+                finishRun(data.status, data.exit_code);
+            }
+        } catch (e) {
+            console.error("Poll error:", e);
+        }
+    }
+
+    // Stop currently running execution
+    async function stopCliCommand() {
+        if (!currentJobId) return;
+        try {
+            const csrfToken = getCookie('csrftoken');
+            await fetch(`/cli-analysis/api/stop/${currentJobId}/`, {
+                method: 'POST',
+                headers: { 'X-CSRFToken': csrfToken }
+            });
+            document.getElementById('terminalBody').innerHTML += `\n<span class="terminal-line warn">⏹ Process termination signal sent by user.</span>\n`;
+        } catch (e) {
+            console.error("Stop error:", e);
+        }
+    }
+
+    // Format and append colored lines to terminal
+    function appendTerminalLines(rawText) {
+        const term = document.getElementById('terminalBody');
+        const lines = rawText.split('\n');
+
+        lines.forEach(line => {
+            if (!line.trim()) return;
+            const lineEl = document.createElement('div');
+            lineEl.className = 'terminal-line';
+
+            if (line.includes('[INFO]')) {
+                lineEl.classList.add('info');
+            } else if (line.includes('saved:') || line.includes('complete!') || line.includes('PASSED')) {
+                lineEl.classList.add('success');
+            } else if (line.includes('[WARNING]') || line.includes('warn')) {
+                lineEl.classList.add('warn');
+            } else if (line.includes('[ERROR]') || line.includes('Traceback') || line.includes('failed')) {
+                lineEl.classList.add('err');
+            }
+
+            lineEl.textContent = line;
+            term.appendChild(lineEl);
+        });
+
+        if (document.getElementById('autoScrollCheck').checked) {
+            term.scrollTop = term.scrollHeight;
+        }
+    }
+
+    function renderReports(reports) {
+        const deck = document.getElementById('reportsDeck');
+        const list = document.getElementById('reportsList');
+        deck.style.display = 'block';
+
+        let html = '';
+        reports.forEach(r => {
+            let icon = '📄';
+            let badgeBg = 'rgba(56, 189, 248, 0.15)';
+            let badgeColor = '#38bdf8';
+            if (r.type === 'PDF') {
+                icon = '📕';
+                badgeBg = 'rgba(244, 63, 94, 0.15)';
+                badgeColor = '#f43f5e';
+            } else if (r.type === 'CSV') {
+                icon = '📊';
+                badgeBg = 'rgba(16, 185, 129, 0.15)';
+                badgeColor = '#10b981';
+            }
+
+            html += `
+            <div style="background: rgba(15, 23, 42, 0.85); border: 1px solid #334155; border-radius: 8px; padding: 0.85rem 1rem; display: flex; justify-content: space-between; align-items: center;">
+                <div style="display: flex; align-items: center; gap: 0.75rem; overflow: hidden;">
+                    <div style="font-size: 1.5rem;">${icon}</div>
+                    <div style="overflow: hidden;">
+                        <div style="font-weight: 700; color: #fff; font-size: 0.85rem; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">
+                            ${r.name}
+                        </div>
+                        <div style="font-size: 0.72rem; color: #94a3b8; display: flex; gap: 0.5rem; align-items: center; margin-top: 0.2rem;">
+                            <span style="background: ${badgeBg}; color: ${badgeColor}; padding: 0.1rem 0.4rem; border-radius: 4px; font-weight: 700;">
+                                ${r.type}
+                            </span>
+                            <span>${r.size_kb} KB</span>
+                        </div>
+                    </div>
+                </div>
+                <div style="display: flex; gap: 0.4rem; flex-shrink: 0;">
+                    <a href="${r.url}" target="_blank" class="btn-secondary" style="font-size: 0.72rem; padding: 0.25rem 0.55rem; text-decoration: none;">
+                        View
+                    </a>
+                    <a href="${r.url}?download=1" class="btn-primary" style="font-size: 0.72rem; padding: 0.25rem 0.55rem; text-decoration: none;">
+                        Download
+                    </a>
+                </div>
+            </div>`;
+        });
+        list.innerHTML = html;
+    }
+
+    function updateStatus(state, text) {
+        const badge = document.getElementById('statusBadge');
+        const dot = document.getElementById('statusDot');
+        const label = document.getElementById('statusText');
+
+        label.textContent = text;
+        dot.className = '';
+
+        if (state === 'running') {
+            badge.style.background = 'rgba(16, 185, 129, 0.15)';
+            badge.style.borderColor = 'rgba(16, 185, 129, 0.4)';
+            badge.style.color = '#10b981';
+            dot.className = 'pulse-dot';
+            dot.style.background = '#10b981';
+        } else if (state === 'completed') {
+            badge.style.background = 'rgba(16, 185, 129, 0.15)';
+            badge.style.borderColor = 'rgba(16, 185, 129, 0.4)';
+            badge.style.color = '#10b981';
+            dot.style.background = '#10b981';
+        } else if (state === 'failed' || state === 'stopped') {
+            badge.style.background = 'rgba(244, 63, 94, 0.15)';
+            badge.style.borderColor = 'rgba(244, 63, 94, 0.4)';
+            badge.style.color = '#f43f5e';
+            dot.style.background = '#f43f5e';
+        } else {
+            badge.style.background = 'rgba(51, 65, 85, 0.4)';
+            badge.style.borderColor = 'rgba(51, 65, 85, 0.6)';
+            badge.style.color = '#94a3b8';
+            dot.style.background = '#64748b';
+        }
+    }
+
+    function finishRun(status, exitCode) {
+        clearInterval(timerInterval);
+        const btnRun = document.getElementById('btnRun');
+        const btnStop = document.getElementById('btnStop');
+
+        btnRun.disabled = false;
+        btnRun.style.opacity = '1';
+        document.getElementById('btnRunText').textContent = 'Run CLI Analysis';
+        btnStop.disabled = true;
+        btnStop.style.opacity = '0.5';
+
+        const term = document.getElementById('terminalBody');
+        if (status === 'completed') {
+            updateStatus('completed', 'COMPLETED (Exit 0)');
+            term.innerHTML += `\n<span class="terminal-line success">✔ Process execution completed successfully. Reports generated.</span>\n`;
+        } else if (status === 'stopped') {
+            updateStatus('stopped', 'STOPPED');
+            term.innerHTML += `\n<span class="terminal-line warn">⏹ Process stopped by user.</span>\n`;
+        } else {
+            updateStatus('failed', `FAILED (Exit ${exitCode !== undefined ? exitCode : 'Err'})`);
+            term.innerHTML += `\n<span class="terminal-line err">✖ Process exited with errors (Code ${exitCode}).</span>\n`;
+        }
+    }
+
+    function startTimer() {
+        clearInterval(timerInterval);
+        timerInterval = setInterval(() => {
+            if (!startTime) return;
+            const diff = Math.floor((Date.now() - startTime) / 1000);
+            const hrs = String(Math.floor(diff / 3600)).padStart(2, '0');
+            const mins = String(Math.floor((diff % 3600) / 60)).padStart(2, '0');
+            const secs = String(diff % 60).padStart(2, '0');
+            document.getElementById('telemetryTimer').textContent = `${hrs}:${mins}:${secs}`;
+        }, 1000);
+    }
+
+    function downloadConsoleLog() {
+        const text = document.getElementById('terminalBody').innerText;
+        const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `cli_log_${new Date().toISOString().replace(/[:.]/g, '_')}.log`;
+        a.click();
+        URL.revokeObjectURL(url);
+    }
+
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    // Initialize preview on page load
+    document.addEventListener('DOMContentLoaded', () => {
+        updatePreview();
+    });
+</script>
+{% endblock %}

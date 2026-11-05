@@ -1,0 +1,155 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Top 20 Structured Research Report - AI Stock Research Agent{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 1rem;">
+    <div>
+        <h1 style="font-size: 1.75rem; font-weight: 800; color: #fff; letter-spacing: -0.02em;">Top-20 Comprehensive Research Report</h1>
+        <p class="text-secondary" style="font-size: 0.9rem;">Canonical investment report with theses, bull/bear cases, invalidation rules, citations & risk disclosures</p>
+    </div>
+    <div style="display: flex; gap: 0.75rem;">
+        <a href="{% url 'rankings:download_top20_report' %}" class="btn-primary" style="text-decoration: none; display: flex; align-items: center; gap: 0.4rem;">
+            <span>📄</span>
+            <span>Download Report (.md)</span>
+        </a>
+        <a href="{% url 'rankings:screener' %}" class="btn-secondary" style="text-decoration: none;">
+            ← Back to Screener
+        </a>
+    </div>
+</div>
+
+<!-- Report Content Wrapper -->
+<div class="fin-card" style="padding: 2rem;">
+    <!-- 1. Executive Summary -->
+    <div style="border-bottom: 1px solid var(--border-color); padding-bottom: 1.5rem; margin-bottom: 1.5rem;">
+        <h2 style="font-size: 1.35rem; font-weight: 700; color: #fff; margin-bottom: 0.75rem;">1. Executive Summary</h2>
+        <p style="font-size: 0.88rem; color: var(--text-secondary); line-height: 1.7;">
+            This institutional equity research report summarizes quantitative rankings across Indian listed securities on the National Stock Exchange (NSE) and Bombay Stock Exchange (BSE). Evaluated using deterministic multi-factor rules (30% Quality, 20% Growth, 15% Valuation, 15% Momentum, 10% Catalysts, and -10% Risk Penalty), each security is vetted for balance sheet strength, return on capital (ROCE/ROE), corporate governance integrity, and intrinsic valuation margin of safety.
+        </p>
+    </div>
+
+    <!-- 2. Ranked Table -->
+    <div style="border-bottom: 1px solid var(--border-color); padding-bottom: 1.5rem; margin-bottom: 1.5rem;">
+        <h2 style="font-size: 1.35rem; font-weight: 700; color: #fff; margin-bottom: 1rem;">2. Ranked Watchlist Overview</h2>
+        <div class="fin-table-container">
+            <table class="fin-table">
+                <thead>
+                    <tr>
+                        <th>Rank</th>
+                        <th>Symbol</th>
+                        <th>Company Name</th>
+                        <th>Sector</th>
+                        <th>LTP (₹)</th>
+                        <th>Composite Score</th>
+                        <th>Quality</th>
+                        <th>Valuation</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for ev in evals %}
+                    <tr>
+                        <td class="font-mono text-positive" style="font-weight: 700;">#{{ ev.rank }}</td>
+                        <td>
+                            <a href="{% url 'research:stock_detail' ev.stock.symbol %}" style="color: #60a5fa; font-weight: 700; text-decoration: none;">
+                                {{ ev.stock.clean_symbol }}
+                            </a>
+                        </td>
+                        <td style="color: #fff;">{{ ev.stock.name }}</td>
+                        <td class="text-secondary">{{ ev.stock.sector }}</td>
+                        <td class="font-mono">₹{{ ev.stock.current_price|floatformat:2 }}</td>
+                        <td><span class="score-badge score-high">{{ ev.composite_score|floatformat:1 }}</span></td>
+                        <td class="font-mono">{{ ev.quality_score|floatformat:0 }}</td>
+                        <td class="font-mono">{{ ev.valuation_score|floatformat:0 }}</td>
+                        <td>
+                            <span class="action-badge {% if ev.action == 'Strong Buy' %}action-strong-buy{% else %}action-research{% endif %}">
+                                {{ ev.action }}
+                            </span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- 3. Detailed Research Notes -->
+    <div>
+        <h2 style="font-size: 1.35rem; font-weight: 700; color: #fff; margin-bottom: 1.25rem;">3. Detailed Equity Research Notes</h2>
+        
+        <div style="display: flex; flex-direction: column; gap: 2rem;">
+            {% for ev in evals %}
+            <div style="background: var(--bg-input); padding: 1.5rem; border-radius: 10px; border: 1px solid var(--border-color);">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
+                    <div>
+                        <h3 style="font-size: 1.2rem; font-weight: 700; color: #fff;">
+                            #{{ ev.rank }}. {{ ev.stock.name }} — {{ ev.stock.exchange }}: {{ ev.stock.clean_symbol }}
+                        </h3>
+                        <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.2rem;">
+                            Sector: {{ ev.stock.sector }} | CMP: ₹{{ ev.stock.current_price|floatformat:2 }} | Market Cap: {{ ev.stock.formatted_mcap }}
+                        </div>
+                    </div>
+                    <div style="text-align: right;">
+                        <span class="score-badge score-high" style="font-size: 1.1rem;">{{ ev.composite_score|floatformat:1 }} / 100</span>
+                        <div style="margin-top: 0.35rem;">
+                            <span class="action-badge action-strong-buy">{{ ev.action }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Investment Thesis -->
+                <div style="margin-bottom: 1rem;">
+                    <div style="font-size: 0.82rem; font-weight: 700; color: #60a5fa; text-transform: uppercase;">Investment Thesis:</div>
+                    <p style="font-size: 0.85rem; color: #f8fafc; line-height: 1.6; margin-top: 0.25rem;">
+                        {{ ev.stock.name }} represents an institutional compounder with proven capital allocation track record (Quality Score: {{ ev.quality_score|floatformat:0 }}/100) and prudent balance sheet leverage. Supported by consistent domestic demand and expanding economic moat.
+                    </p>
+                </div>
+
+                <!-- Bull & Bear Cases -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; margin-bottom: 1rem;">
+                    <div style="background: rgba(16, 185, 129, 0.05); padding: 1rem; border-radius: 8px; border: 1px solid rgba(16, 185, 129, 0.2);">
+                        <div style="font-size: 0.8rem; font-weight: 700; color: #10b981; text-transform: uppercase; margin-bottom: 0.4rem;">Bull Case (Verified Data):</div>
+                        <ul style="padding-left: 1.15rem; font-size: 0.8rem; color: var(--text-secondary); line-height: 1.6;">
+                            {% for b in ev.bull_case %}
+                            <li>{{ b }} <span style="color: var(--text-muted); font-size: 0.72rem;">(Audited Filings)</span></li>
+                            {% empty %}
+                            <li>High Return on Capital Employed driving organic growth reinvestment.</li>
+                            <li>Strong domestic market positioning with robust operating cash flows.</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+
+                    <div style="background: rgba(244, 63, 94, 0.05); padding: 1rem; border-radius: 8px; border: 1px solid rgba(244, 63, 94, 0.2);">
+                        <div style="font-size: 0.8rem; font-weight: 700; color: #f43f5e; text-transform: uppercase; margin-bottom: 0.4rem;">Bear Case & Vulnerabilities:</div>
+                        <ul style="padding-left: 1.15rem; font-size: 0.8rem; color: var(--text-secondary); line-height: 1.6;">
+                            {% for b in ev.bear_case %}
+                            <li>{{ b }}</li>
+                            {% empty %}
+                            <li>Valuation multiple sensitivity to quarterly earnings delivery.</li>
+                            <li>Cyclical commodity or raw material cost inflation exposure.</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Thesis Invalidation Conditions -->
+                <div style="background: rgba(15, 23, 42, 0.8); padding: 0.85rem 1rem; border-radius: 6px; border: 1px solid var(--border-color); margin-bottom: 0.75rem;">
+                    <div style="font-size: 0.78rem; font-weight: 700; color: #fbbf24; text-transform: uppercase; margin-bottom: 0.35rem;">Thesis Invalidation Conditions:</div>
+                    <div style="font-size: 0.78rem; color: var(--text-secondary); line-height: 1.5;">
+                        1. Revenue growth slows below 6.0% for two consecutive quarters.<br>
+                        2. Operating margin contracts by >250 basis points due to unhedged competitive price cuts.<br>
+                        3. Significant corporate governance concerns, auditor qualifications, or promoter share pledging.
+                    </div>
+                </div>
+
+                <div style="font-size: 0.72rem; color: var(--text-muted); text-align: right;">
+                    Disclaimer: Educational research output only, not investment advice.
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,57 @@
+# AI Stock Market Research & Ranking Agent Configuration
+
+system:
+  project_name: "AI Stock Market Research & Ranking Agent"
+  version: "1.0.0"
+  log_level: "INFO"
+  log_file: "data/logs/stock_agent.log"
+  cache_dir: "data/raw"
+  db_path: "sqlite:///data/stock_research.db"
+  vector_db_path: "data/chroma_db"
+
+scoring_weights:
+  quality: 0.30
+  growth: 0.20
+  valuation: 0.15
+  momentum: 0.15
+  catalyst: 0.10
+  risk_penalty: 0.10
+
+screening_defaults:
+  min_market_cap_cr: 500.0        # Minimum market cap in INR Crores
+  min_avg_daily_volume: 50000     # 30-day average daily trading volume
+  min_avg_daily_turnover_cr: 0.5  # 30-day average daily turnover in Crores
+  exclude_penny_stocks: true
+  min_share_price: 10.0           # Minimum stock price in INR
+  allowed_exchanges:
+    - "NSE"
+    - "BSE"
+
+data_fetching:
+  price_history_period: "2y"
+  request_timeout: 15
+  max_retries: 3
+  backoff_factor: 2
+  news_fetch_limit: 15
+  news_lookback_days: 30
+
+llm:
+  provider: "openai"              # 'openai' or 'ollama'
+  model_name: "gpt-4o-mini"
+  temperature: 0.2
+  max_tokens: 2048
+  embedding_model: "text-embedding-3-small"
+
+backtest_defaults:
+  initial_capital: 1000000.0      # INR 10 Lakhs
+  top_n_stocks: 10
+  rebalance_frequency: "M"        # 'M' for Monthly, 'Q' for Quarterly
+  transaction_cost_pct: 0.001     # 0.1% brokerage + slippage + STT
+  benchmark_symbol: "^NSEI"       # Nifty 50 Index Ticker in yfinance
+
+compliance:
+  disclaimer: >
+    DISCLAIMER: This report and ranking system is an AI-assisted personal research and educational decision-support tool only.
+    It does NOT constitute personalized investment advice, financial advisory services, or stock recommendations.
+    Stock market investments are subject to market risks. Read all related documents carefully before investing.
+    Past performance is not an indicator or guarantee of future returns. No assured or guaranteed returns are claimed or implied.

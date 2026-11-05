@@ -1,0 +1,244 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Dashboard - AI Stock Market Research & Ranking Agent{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: flex-end;">
+    <div>
+        <h1 style="font-size: 1.75rem; font-weight: 800; color: #fff; letter-spacing: -0.02em;">Executive Market Dashboard</h1>
+        <p class="text-secondary" style="font-size: 0.9rem;">Real-time quantitative tracking & AI-driven factor ranking across NSE and BSE securities</p>
+    </div>
+    <div style="text-align: right;">
+        <span style="font-size: 0.8rem; color: var(--text-muted);">As of {{ MARKET_TIME_IST }}</span>
+    </div>
+</div>
+
+<!-- Indices Grid -->
+<div class="kpi-grid">
+    {% for idx in indices %}
+    <div class="kpi-card" style="border-top-color: {% if idx.is_positive %}#10b981{% else %}#f43f5e{% endif %};">
+        <div class="kpi-label">{{ idx.name }}</div>
+        <div class="kpi-value">{{ idx.value|floatformat:2 }}</div>
+        <div class="kpi-delta {% if idx.is_positive %}text-positive{% else %}text-negative{% endif %}">
+            <span>{% if idx.is_positive %}▲ +{% else %}▼ {% endif %}{{ idx.change|floatformat:2 }} ({{ idx.change_pct|floatformat:2 }}%)</span>
+        </div>
+        <div style="margin-top: 0.5rem; display: flex; justify-content: space-between; font-size: 0.72rem; color: var(--text-muted); font-family: var(--font-mono);">
+            <span>L: {{ idx.low|floatformat:0 }}</span>
+            <span>H: {{ idx.high|floatformat:0 }}</span>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Market Breadth & Summary Row -->
+<div style="display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
+    <!-- Top Ranked Equities -->
+    <div class="fin-card" style="margin-bottom: 0;">
+        <div class="fin-card-header">
+            <div class="fin-card-title">
+                <span>🏆</span>
+                <span>Top Ranked Equities Today</span>
+            </div>
+            <a href="{% url 'rankings:screener' %}" class="btn-secondary" style="font-size: 0.78rem; text-decoration: none;">View All Screener →</a>
+        </div>
+        <div class="fin-table-container">
+            <table class="fin-table">
+                <thead>
+                    <tr>
+                        <th>Rank</th>
+                        <th>Stock</th>
+                        <th>Price (₹)</th>
+                        <th>Day Chg</th>
+                        <th>Composite</th>
+                        <th>Quality</th>
+                        <th>Valuation</th>
+                        <th>Action</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for ev in top_rankings %}
+                    <tr>
+                        <td style="font-weight: 700; color: #60a5fa;" class="font-mono">#{{ ev.rank }}</td>
+                        <td>
+                            <a href="{% url 'research:stock_detail' ev.stock.symbol %}" style="text-decoration: none; color: #fff; font-weight: 700;">
+                                {{ ev.stock.clean_symbol }}
+                            </a>
+                            <span style="font-size: 0.72rem; color: var(--text-muted); margin-left: 0.35rem;">{{ ev.stock.exchange }}</span>
+                            <div style="font-size: 0.75rem; color: var(--text-secondary); max-width: 170px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                {{ ev.stock.name }}
+                            </div>
+                        </td>
+                        <td class="font-mono" style="font-weight: 600;">₹{{ ev.stock.current_price|floatformat:2 }}</td>
+                        <td class="font-mono {% if ev.stock.day_change_pct >= 0 %}text-positive{% else %}text-negative{% endif %}" style="font-weight: 600;">
+                            {% if ev.stock.day_change_pct >= 0 %}+{% endif %}{{ ev.stock.day_change_pct|floatformat:2 }}%
+                        </td>
+                        <td>
+                            <span class="score-badge {% if ev.composite_score >= 70 %}score-high{% elif ev.composite_score >= 50 %}score-med{% else %}score-low{% endif %}">
+                                {{ ev.composite_score|floatformat:1 }}
+                            </span>
+                        </td>
+                        <td class="font-mono">{{ ev.quality_score|floatformat:0 }}</td>
+                        <td class="font-mono">{{ ev.valuation_score|floatformat:0 }}</td>
+                        <td>
+                            <span class="action-badge {% if ev.action == 'Strong Buy' %}action-strong-buy{% elif ev.action == 'Research' %}action-research{% else %}action-watch{% endif %}">
+                                {{ ev.action }}
+                            </span>
+                        </td>
+                        <td>
+                            <a href="{% url 'research:stock_detail' ev.stock.symbol %}" class="btn-primary" style="padding: 0.25rem 0.6rem; font-size: 0.75rem; text-decoration: none;">
+                                Research
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="9" style="text-align: center; color: var(--text-muted); padding: 2rem;">No evaluations available.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Market Breadth Widget -->
+    <div class="fin-card" style="margin-bottom: 0;">
+        <div class="fin-card-header">
+            <div class="fin-card-title">
+                <span>⚖️</span>
+                <span>Market Breadth</span>
+            </div>
+            <span class="text-secondary font-mono" style="font-size: 0.8rem;">{{ total_stocks }} Equities</span>
+        </div>
+        
+        <!-- Breadth Visual Bar -->
+        <div style="margin-bottom: 1.5rem;">
+            <div style="display: flex; height: 12px; border-radius: 6px; overflow: hidden; background: #1e293b; margin-bottom: 0.5rem;">
+                <div style="width: {% widthratio advances total_stocks 100 %}%; background: #10b981;" title="Advances"></div>
+                <div style="width: {% widthratio unchanged total_stocks 100 %}%; background: #64748b;" title="Unchanged"></div>
+                <div style="width: {% widthratio declines total_stocks 100 %}%; background: #f43f5e;" title="Declines"></div>
+            </div>
+            <div style="display: flex; justify-content: space-between; font-size: 0.78rem;">
+                <span class="text-positive font-mono" style="font-weight: 600;">▲ {{ advances }} Advances</span>
+                <span class="text-muted font-mono">{{ unchanged }} Unch</span>
+                <span class="text-negative font-mono" style="font-weight: 600;">▼ {{ declines }} Declines</span>
+            </div>
+        </div>
+
+        <!-- Sector Summary -->
+        <div style="border-top: 1px solid var(--border-color); padding-top: 1rem;">
+            <div style="font-size: 0.82rem; font-weight: 700; color: #fff; margin-bottom: 0.75rem;">Monitored Sectors</div>
+            <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                {% for sec in sectors %}
+                <div style="display: flex; justify-content: space-between; font-size: 0.8rem;">
+                    <span class="text-secondary">{{ sec.sector }}</span>
+                    <span class="font-mono" style="color: #60a5fa;">{{ sec.count }} stocks</span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Market & Risk Alerts (Specification 6.1: Recent Alerts) -->
+<div class="fin-card" style="margin-bottom: 1.5rem;">
+    <div class="fin-card-header">
+        <div class="fin-card-title">
+            <span>🔔</span>
+            <span>Recent Market &amp; Risk Alerts</span>
+        </div>
+        <span class="badge" style="background: rgba(245, 158, 11, 0.15); color: #fbbf24;">Live Surveillance</span>
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1rem;">
+        {% for alert in recent_alerts %}
+        <div style="background: rgba(15, 23, 42, 0.6); padding: 1rem; border-radius: 8px; border-left: 4px solid {% if alert.severity == 'warning' %}#f59e0b{% elif alert.severity == 'info' %}#3b82f6{% elif alert.severity == 'danger' %}#ef4444{% else %}#10b981{% endif %}; border-top: 1px solid var(--border-color); border-right: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
+                <span style="font-size: 0.82rem; font-weight: 700; color: #fff;">{{ alert.title }}</span>
+                <span class="font-mono text-muted" style="font-size: 0.7rem;">{{ alert.time }}</span>
+            </div>
+            <p style="font-size: 0.78rem; color: var(--text-secondary); line-height: 1.5; margin: 0;">
+                {{ alert.message }}
+            </p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Movers Grid: Gainers & Losers -->
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+    <!-- Top Gainers -->
+    <div class="fin-card">
+        <div class="fin-card-header">
+            <div class="fin-card-title text-positive">
+                <span>🚀</span>
+                <span>Top Daily Gainers</span>
+            </div>
+        </div>
+        <div class="fin-table-container">
+            <table class="fin-table">
+                <thead>
+                    <tr>
+                        <th>Symbol</th>
+                        <th>Price</th>
+                        <th>Change</th>
+                        <th>Market Cap</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for s in top_gainers %}
+                    <tr>
+                        <td>
+                            <a href="{% url 'research:stock_detail' s.symbol %}" style="color: #60a5fa; font-weight: 700; text-decoration: none;">
+                                {{ s.clean_symbol }}
+                            </a>
+                            <span style="font-size: 0.72rem; color: var(--text-muted);">{{ s.exchange }}</span>
+                        </td>
+                        <td class="font-mono">₹{{ s.current_price|floatformat:2 }}</td>
+                        <td class="font-mono text-positive" style="font-weight: 700;">+{{ s.day_change_pct|floatformat:2 }}%</td>
+                        <td class="font-mono text-secondary">{{ s.formatted_mcap }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Top Losers -->
+    <div class="fin-card">
+        <div class="fin-card-header">
+            <div class="fin-card-title text-negative">
+                <span>📉</span>
+                <span>Top Daily Losers</span>
+            </div>
+        </div>
+        <div class="fin-table-container">
+            <table class="fin-table">
+                <thead>
+                    <tr>
+                        <th>Symbol</th>
+                        <th>Price</th>
+                        <th>Change</th>
+                        <th>Market Cap</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for s in top_losers %}
+                    <tr>
+                        <td>
+                            <a href="{% url 'research:stock_detail' s.symbol %}" style="color: #60a5fa; font-weight: 700; text-decoration: none;">
+                                {{ s.clean_symbol }}
+                            </a>
+                            <span style="font-size: 0.72rem; color: var(--text-muted);">{{ s.exchange }}</span>
+                        </td>
+                        <td class="font-mono">₹{{ s.current_price|floatformat:2 }}</td>
+                        <td class="font-mono text-negative" style="font-weight: 700;">{{ s.day_change_pct|floatformat:2 }}%</td>
+                        <td class="font-mono text-secondary">{{ s.formatted_mcap }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

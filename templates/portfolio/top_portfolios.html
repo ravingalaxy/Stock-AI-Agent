@@ -1,0 +1,493 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Top 10 Portfolios of Stock Market - AI Stock Research Agent{% endblock %}
+
+{% block content %}
+<!-- Top Header Row -->
+<div style="margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 1rem;">
+    <div>
+        <div style="display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.25rem;">
+            <span style="font-size: 1.7rem;">🏆</span>
+            <h1 style="font-size: 1.85rem; font-weight: 800; color: #fff; letter-spacing: -0.02em;">
+                Top 10 Portfolios of Stock Market
+            </h1>
+        </div>
+        <p class="text-secondary" style="font-size: 0.9rem;">
+            Institutional analysis of Dalal Street's legendary superinvestors and premier thematic model portfolios with exhaustive stock-by-stock investment rationales.
+        </p>
+    </div>
+
+    <!-- Quick Navigation Actions -->
+    <div style="display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;">
+        <button id="btnSyncPrices" onclick="syncLivePrices('{{ active_portfolio.id }}')" class="btn-secondary" style="padding: 0.5rem 1rem; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 0.4rem; cursor: pointer; border-color: rgba(59, 130, 246, 0.4); color: #60a5fa;" title="Fetch live exchange prices for all {{ active_portfolio.stock_count }} stocks in {{ active_portfolio.name }}">
+            <span id="syncIcon">🔄</span> <span id="syncText">Sync Live Prices</span>
+        </button>
+        <a href="{% url 'portfolio:analyze_top_portfolio' active_portfolio.id %}" class="btn-primary" style="padding: 0.5rem 1rem; font-size: 0.85rem; text-decoration: none; display: inline-flex; align-items: center; gap: 0.4rem;">
+            <span>⚡</span> Run 9-Investor Diagnostic
+        </a>
+        <a href="{% url 'portfolio:analysis' %}" class="btn-secondary" style="padding: 0.5rem 1rem; font-size: 0.85rem; text-decoration: none; display: inline-flex; align-items: center; gap: 0.4rem;">
+            <span>📊</span> Portfolio Analysis
+        </a>
+    </div>
+</div>
+
+<!-- Statutory Compliance Banner -->
+<div style="background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 8px; padding: 0.85rem 1.25rem; margin-bottom: 1.5rem; display: flex; align-items: flex-start; gap: 0.75rem;">
+    <span style="font-size: 1.25rem; line-height: 1;">⚖️</span>
+    <div style="font-size: 0.78rem; color: #fbbf24; line-height: 1.45;">
+        <strong>COMPLIANCE DISCLAIMER:</strong> {{ disclaimer }}
+    </div>
+</div>
+
+{% if user_shared_stocks %}
+<!-- Co-Investment Alignment Banner with Active User Portfolio -->
+<div style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.35); border-radius: 8px; padding: 0.95rem 1.25rem; margin-bottom: 1.5rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem;">
+    <div style="display: flex; align-items: center; gap: 0.85rem;">
+        <span style="font-size: 1.6rem;">🤝</span>
+        <div>
+            <div style="font-size: 0.92rem; font-weight: 700; color: #34d399;">
+                Co-Investment Alignment with {{ active_portfolio.name }}
+            </div>
+            <div style="font-size: 0.8rem; color: #e2e8f0; margin-top: 0.2rem;">
+                Your uploaded portfolio holds <strong>{{ user_shared_stocks|length }} stock(s)</strong> in common: 
+                <span class="font-mono" style="color: #60a5fa; font-weight: 700;">{{ user_shared_stocks|join:", " }}</span>, 
+                representing <strong>{{ user_shared_weight }}%</strong> of your total portfolio value.
+            </div>
+        </div>
+    </div>
+    <a href="{% url 'portfolio:analysis' %}" class="btn-secondary" style="padding: 0.4rem 0.85rem; font-size: 0.78rem; text-decoration: none; display: inline-flex; align-items: center; gap: 0.3rem;">
+        <span>📊</span> View in Portfolio Analysis →
+    </a>
+</div>
+{% endif %}
+
+<!-- Stock Cross-Search Discovery Tool -->
+<div class="fin-card" style="margin-bottom: 1.5rem; padding: 1.25rem;">
+    <form method="get" action="{% url 'portfolio:top_portfolios' %}" style="display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: center;">
+        <div style="position: relative; flex: 1; min-width: 280px;">
+            <input type="text" name="q" value="{{ query }}" placeholder="Search any stock across all Top 10 Portfolios (e.g., TITAN, TATAPOWER, LT, DMART, TEJASNET)..."
+                   class="fin-input" style="width: 100%; padding-left: 2.2rem; font-size: 0.85rem;">
+            <span style="position: absolute; left: 0.8rem; top: 50%; transform: translateY(-50%); color: var(--text-muted); font-size: 0.9rem;">🔍</span>
+        </div>
+        <button type="submit" class="btn-primary" style="padding: 0.55rem 1.25rem; font-size: 0.85rem;">
+            Find in Portfolios
+        </button>
+        {% if query %}
+        <a href="{% url 'portfolio:top_portfolios' %}?portfolio={{ active_portfolio.id }}" class="btn-secondary" style="padding: 0.55rem 1rem; font-size: 0.85rem; text-decoration: none;">
+            Clear Search
+        </a>
+        {% endif %}
+    </form>
+
+    {% if search_results %}
+    <div style="margin-top: 1.25rem; border-top: 1px solid var(--border-color); padding-top: 1rem;">
+        <div style="font-size: 0.85rem; font-weight: 700; color: #34d399; margin-bottom: 0.75rem;">
+            🎯 Found {{ search_results|length }} Top Portfolio occurrence(s) matching "{{ query }}":
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1rem;">
+            {% for res in search_results %}
+            <div style="background: var(--bg-input); padding: 1rem; border-radius: 8px; border-left: 3px solid #3b82f6;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
+                    <a href="{% url 'portfolio:top_portfolio_detail' res.portfolio_id %}" style="font-weight: 700; color: #60a5fa; text-decoration: none; font-size: 0.88rem;">
+                        {{ res.portfolio_name }}
+                    </a>
+                    <span class="font-mono text-positive" style="font-weight: 700; font-size: 0.82rem;">{{ res.holding.weight_pct }}% Weight</span>
+                </div>
+                <div style="font-size: 0.78rem; color: #fff; font-weight: 600; margin-bottom: 0.4rem;">
+                    {{ res.holding.clean_symbol }} — {{ res.holding.stock_name }} ({{ res.holding.sector }})
+                </div>
+                <div style="font-size: 0.76rem; color: var(--text-secondary); line-height: 1.45;">
+                    <strong>Core Rationale:</strong> {{ res.holding.primary_reason }}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% elif market_stock_match %}
+    <div style="margin-top: 1.25rem; border-top: 1px solid var(--border-color); padding-top: 1rem;">
+        <div style="background: rgba(59, 130, 246, 0.08); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 8px; padding: 1.25rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+                <div>
+                    <div style="display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.35rem;">
+                        <span class="font-mono text-positive" style="font-size: 1.2rem; font-weight: 800;">{{ market_stock_match.clean_symbol }}</span>
+                        <span style="color: #fff; font-weight: 700; font-size: 0.95rem;">{{ market_stock_match.name }}</span>
+                        <span style="font-size: 0.7rem; background: rgba(59, 130, 246, 0.15); color: #60a5fa; padding: 0.15rem 0.45rem; border-radius: 4px;">{{ market_stock_match.exchange }}</span>
+                        <span style="font-size: 0.7rem; background: rgba(16, 185, 129, 0.15); color: #34d399; padding: 0.15rem 0.45rem; border-radius: 4px;">{{ market_stock_match.sector }}</span>
+                    </div>
+                    <div style="font-size: 0.85rem; color: #cbd5e1; line-height: 1.5; max-width: 780px;">
+                        ✓ <strong>Listed Stock Found in Stock Market:</strong> <em>{{ market_stock_match.name }}</em> is an active listed security on {{ market_stock_match.exchange }} currently trading at <strong class="font-mono" style="color: #60a5fa;">₹{{ market_stock_match.current_price|floatformat:2 }}</strong>. While it is not currently held in Dalal Street's Top 10 Superinvestor Portfolios, you can run a full institutional AI analysis, DCF valuation, and technical trend evaluation below.
+                    </div>
+                </div>
+                <div style="display: flex; gap: 0.6rem;">
+                    <a href="{% url 'research:stock_detail' market_stock_match.clean_symbol %}" class="btn-primary" style="padding: 0.55rem 1.15rem; font-size: 0.82rem; text-decoration: none; display: inline-flex; align-items: center; gap: 0.4rem;">
+                        <span>🔍</span> Launch Full Analysis for {{ market_stock_match.clean_symbol }}
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% elif query %}
+    <div style="margin-top: 1rem; font-size: 0.82rem; color: var(--text-secondary);">
+        No stocks found matching "{{ query }}" on NSE or BSE. Try entering any active Indian ticker like "IDEA", "SUZLON", "TITAN", "LT", or "TATAPOWER".
+    </div>
+    {% endif %}
+</div>
+
+<!-- Top 10 Portfolios Selector Carousel / Grid -->
+<div style="margin-bottom: 1.5rem;">
+    <div style="font-size: 0.95rem; font-weight: 700; color: #fff; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.5rem;">
+        <span>📁</span> Select One of Dalal Street's Top 10 Portfolios
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 0.85rem;">
+        {% for p in all_portfolios %}
+        <a href="{% url 'portfolio:top_portfolio_detail' p.id %}"
+           style="text-decoration: none; padding: 0.85rem 1rem; border-radius: 8px; border: 1px solid {% if p.id == active_portfolio.id %}#3b82f6{% else %}var(--border-color){% endif %}; background: {% if p.id == active_portfolio.id %}rgba(59, 130, 246, 0.12){% else %}var(--bg-card){% endif %}; display: flex; flex-direction: column; justify-content: space-between; transition: all 0.2s;"
+           class="top-port-card">
+            <div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+                    <span style="font-size: 1.4rem;">{{ p.icon }}</span>
+                    <span style="font-size: 0.68rem; font-family: var(--font-mono); padding: 0.15rem 0.4rem; border-radius: 4px; background: rgba(255, 255, 255, 0.05); color: var(--text-secondary);">
+                        {{ p.category }}
+                    </span>
+                </div>
+                <div style="font-weight: 700; font-size: 0.85rem; color: #fff; line-height: 1.3; margin-bottom: 0.25rem;">
+                    {{ p.name }}
+                </div>
+                <div style="font-size: 0.72rem; color: var(--text-secondary); line-height: 1.35; margin-bottom: 0.6rem;">
+                    {{ p.dominant_philosophy|truncatechars:38 }}
+                </div>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border-color); padding-top: 0.4rem; font-size: 0.7rem; font-family: var(--font-mono);">
+                <span class="text-secondary">{{ p.stock_count }} Holdings</span>
+                <span style="color: #60a5fa; font-weight: 700;">Top: {{ p.top_holding.clean_symbol }} ({{ p.top_holding.weight_pct }}%)</span>
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Active Portfolio Executive Profile Card -->
+<div class="fin-card" style="margin-bottom: 1.5rem; padding: 1.5rem; border-top: 4px solid #3b82f6;">
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.25rem;">
+        <div style="display: flex; align-items: center; gap: 1rem;">
+            <div style="width: 56px; height: 56px; border-radius: 12px; background: rgba(59, 130, 246, 0.15); display: flex; align-items: center; justify-content: center; font-size: 2rem;">
+                {{ active_portfolio.icon }}
+            </div>
+            <div>
+                <div style="display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;">
+                    <h2 style="font-size: 1.35rem; font-weight: 800; color: #fff; margin-bottom: 0.15rem;">
+                        {{ active_portfolio.name }}
+                    </h2>
+                    <span style="font-size: 0.7rem; background: rgba(16, 185, 129, 0.15); color: #34d399; padding: 0.15rem 0.5rem; border-radius: 4px; font-weight: 700;">
+                        {{ active_portfolio.category|upper }}
+                    </span>
+                </div>
+                <div style="font-size: 0.85rem; color: #94a3b8; font-weight: 500;">
+                    {{ active_portfolio.subtitle }}
+                </div>
+            </div>
+        </div>
+
+        <div style="display: flex; gap: 0.6rem; flex-wrap: wrap;">
+            <a href="{% url 'portfolio:analyze_top_portfolio' active_portfolio.id %}" class="btn-primary" style="padding: 0.55rem 1.15rem; font-size: 0.85rem; text-decoration: none; font-weight: 700; display: inline-flex; align-items: center; gap: 0.4rem;">
+                <span>⚡</span> Run Full 9-Investor Diagnostic
+            </a>
+        </div>
+    </div>
+
+    <p style="font-size: 0.88rem; color: #e2e8f0; line-height: 1.6; margin-bottom: 1.25rem; max-width: 900px;">
+        {{ active_portfolio.description }}
+    </p>
+
+    <!-- Executive Quick Stats -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 1rem; background: var(--bg-input); padding: 1rem; border-radius: 8px;">
+        <div>
+            <div class="text-secondary" style="font-size: 0.72rem; text-transform: uppercase;">Holdings Count</div>
+            <div class="font-mono" style="font-size: 1.15rem; font-weight: 700; color: #fff;">{{ active_portfolio.stock_count }} Stocks</div>
+        </div>
+        <div>
+            <div class="text-secondary" style="font-size: 0.72rem; text-transform: uppercase;">Top Allocation</div>
+            <div class="font-mono" style="font-size: 1.15rem; font-weight: 700; color: #60a5fa;">{{ active_portfolio.top_holding.clean_symbol }} ({{ active_portfolio.top_holding.weight_pct }}%)</div>
+        </div>
+        <div>
+            <div class="text-secondary" style="font-size: 0.72rem; text-transform: uppercase;">Risk Framework</div>
+            <div style="font-size: 1.05rem; font-weight: 700; color: #fbbf24;">{{ active_portfolio.risk_level }}</div>
+        </div>
+        <div>
+            <div class="text-secondary" style="font-size: 0.72rem; text-transform: uppercase;">Holding Horizon</div>
+            <div style="font-size: 1.05rem; font-weight: 700; color: #34d399;">{{ active_portfolio.typical_holding_horizon }}</div>
+        </div>
+    </div>
+</div>
+
+<!-- Asset Allocation Visuals Grid: Sector Allocation & Market-Cap Tier -->
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 1.5rem; margin-bottom: 1.5rem;">
+    <!-- Sector Breakdown -->
+    <div class="fin-card">
+        <div class="fin-card-header">
+            <div class="fin-card-title">
+                <span>🥧</span>
+                <span>Sector Distribution</span>
+            </div>
+            <span class="text-secondary font-mono" style="font-size: 0.8rem;">{{ active_portfolio.sector_allocation|length }} Sectors</span>
+        </div>
+        <div style="height: 220px; position: relative; margin-bottom: 1rem;">
+            <canvas id="topSecChart"></canvas>
+        </div>
+        <div style="border-top: 1px solid var(--border-color); padding-top: 0.75rem; max-height: 180px; overflow-y: auto;">
+            {% for sec, wt in active_portfolio.sector_allocation.items %}
+            <div style="margin-bottom: 0.5rem;">
+                <div style="display: flex; justify-content: space-between; font-size: 0.78rem; margin-bottom: 0.2rem;">
+                    <span style="color: #e2e8f0;">{{ sec }}</span>
+                    <span class="font-mono text-positive" style="font-weight: 700;">{{ wt }}%</span>
+                </div>
+                <div style="width: 100%; background: rgba(255,255,255,0.06); height: 4px; border-radius: 2px;">
+                    <div style="width: {{ wt }}%; background: #3b82f6; height: 4px; border-radius: 2px;"></div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Market-Cap Breakdown -->
+    <div class="fin-card">
+        <div class="fin-card-header">
+            <div class="fin-card-title">
+                <span>🏛️</span>
+                <span>Market-Cap Tier Allocation</span>
+            </div>
+            <span class="text-secondary font-mono" style="font-size: 0.8rem;">Large vs. Mid vs. Small</span>
+        </div>
+        <div style="height: 220px; position: relative; margin-bottom: 1rem;">
+            <canvas id="topMcapChart"></canvas>
+        </div>
+        <div style="border-top: 1px solid var(--border-color); padding-top: 0.75rem; display: flex; flex-direction: column; gap: 0.5rem;">
+            {% for tier, wt in active_portfolio.market_cap_allocation.items %}
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.45rem 0.65rem; background: rgba(255, 255, 255, 0.03); border-radius: 6px; font-size: 0.78rem;">
+                <span style="color: #fff; font-weight: 600;">{{ tier }}</span>
+                <span class="font-mono" style="font-weight: 700; color: #38bdf8;">{{ wt }}%</span>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- Complete Holdings & Deep Stock Rationales -->
+<div class="fin-card" style="margin-bottom: 2rem;">
+    <div class="fin-card-header">
+        <div class="fin-card-title">
+            <span>📋</span>
+            <span>Complete Holdings &amp; Forensic Investment Rationale for Every Stock</span>
+        </div>
+        <span class="text-secondary font-mono" style="font-size: 0.82rem;">
+            {{ active_portfolio.stock_count }} Positions Analyzed
+        </span>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 1.25rem;">
+        {% for h in active_portfolio.holdings %}
+        <div style="background: var(--bg-input); border-radius: 8px; border: 1px solid var(--border-color); padding: 1.25rem;">
+            <!-- Stock Header Row -->
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 0.75rem; margin-bottom: 1rem; border-bottom: 1px solid rgba(255, 255, 255, 0.05); padding-bottom: 0.75rem;">
+                <div>
+                    <div style="display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; margin-bottom: 0.25rem;">
+                        <span class="font-mono" style="font-size: 1.15rem; font-weight: 800; color: #fff;">{{ h.clean_symbol }}</span>
+                        <span style="color: #94a3b8; font-size: 0.85rem;">{{ h.stock_name }}</span>
+                        <span style="font-size: 0.68rem; background: rgba(59, 130, 246, 0.15); color: #60a5fa; padding: 0.15rem 0.45rem; border-radius: 4px;">{{ h.exchange }}</span>
+                        <span style="font-size: 0.68rem; background: rgba(139, 92, 246, 0.15); color: #c084fc; padding: 0.15rem 0.45rem; border-radius: 4px;">{{ h.market_cap_tier }}</span>
+                        {% if h.user_match %}
+                        <span style="background: rgba(16, 185, 129, 0.2); border: 1px solid rgba(16, 185, 129, 0.4); color: #34d399; font-size: 0.7rem; font-weight: 700; padding: 0.15rem 0.5rem; border-radius: 4px; display: inline-flex; align-items: center; gap: 0.25rem;">
+                            ★ In Your Portfolio ({{ h.user_match.weight_pct }}% wt, ₹{{ h.user_match.current_value|floatformat:0 }})
+                        </span>
+                        {% endif %}
+                    </div>
+                    <div style="font-size: 0.76rem; color: var(--text-secondary);">
+                        Sector: <strong style="color: #e2e8f0;">{{ h.sector }}</strong> | Role: <span style="color: #34d399; font-weight: 600;">{{ h.investor_label }}</span>
+                    </div>
+                </div>
+
+                <div style="text-align: right; display: flex; align-items: center; gap: 1rem;">
+                    <div>
+                        <div class="font-mono" style="font-size: 1.1rem; font-weight: 800; color: #60a5fa;">
+                            ₹{{ h.current_price|floatformat:2 }}
+                        </div>
+                        <div class="text-secondary" style="font-size: 0.7rem;">Live CMP</div>
+                    </div>
+                    <div>
+                        <div class="font-mono text-positive" style="font-size: 1.15rem; font-weight: 800;">
+                            {{ h.weight_pct }}%
+                        </div>
+                        <div class="text-secondary" style="font-size: 0.7rem;">Portfolio Weight</div>
+                    </div>
+                    <a href="{% url 'research:stock_detail' h.clean_symbol %}" class="btn-secondary" style="padding: 0.4rem 0.75rem; font-size: 0.76rem; text-decoration: none; display: inline-flex; align-items: center; gap: 0.35rem;" title="Analyze {{ h.clean_symbol }} in full AI Stock Research module">
+                        <span>🔍</span> Research Stock
+                    </a>
+                </div>
+            </div>
+
+            <!-- Forensic Rationale Grid -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem;">
+                <!-- 1. The Core Rationale -->
+                <div style="background: rgba(59, 130, 246, 0.05); border: 1px solid rgba(59, 130, 246, 0.2); border-radius: 6px; padding: 0.85rem;">
+                    <div style="font-size: 0.78rem; font-weight: 700; color: #60a5fa; margin-bottom: 0.4rem; display: flex; align-items: center; gap: 0.35rem;">
+                        <span>🎯</span> Why This Stock Was Taken (Core Investment Rationale)
+                    </div>
+                    <div style="font-size: 0.8rem; color: #e2e8f0; line-height: 1.5;">
+                        {{ h.primary_reason }}
+                    </div>
+                </div>
+
+                <!-- 2. Competitive Moat -->
+                <div style="background: rgba(16, 185, 129, 0.05); border: 1px solid rgba(16, 185, 129, 0.2); border-radius: 6px; padding: 0.85rem;">
+                    <div style="font-size: 0.78rem; font-weight: 700; color: #34d399; margin-bottom: 0.4rem; display: flex; align-items: center; gap: 0.35rem;">
+                        <span>🏰</span> Competitive Moat &amp; Durability
+                    </div>
+                    <div style="font-size: 0.8rem; color: #e2e8f0; line-height: 1.5;">
+                        {{ h.competitive_moat }}
+                    </div>
+                </div>
+
+                <!-- 3. Growth Catalysts -->
+                <div style="background: rgba(245, 158, 11, 0.05); border: 1px solid rgba(245, 158, 11, 0.2); border-radius: 6px; padding: 0.85rem;">
+                    <div style="font-size: 0.78rem; font-weight: 700; color: #fbbf24; margin-bottom: 0.4rem; display: flex; align-items: center; gap: 0.35rem;">
+                        <span>🚀</span> Primary Alpha Catalysts
+                    </div>
+                    <div style="font-size: 0.8rem; color: #e2e8f0; line-height: 1.5;">
+                        {{ h.growth_catalyst }}
+                    </div>
+                </div>
+
+                <!-- 4. Key Surveillance Risk -->
+                <div style="background: rgba(239, 68, 68, 0.05); border: 1px solid rgba(239, 68, 68, 0.2); border-radius: 6px; padding: 0.85rem;">
+                    <div style="font-size: 0.78rem; font-weight: 700; color: #f87171; margin-bottom: 0.4rem; display: flex; align-items: center; gap: 0.35rem;">
+                        <span>⚠️</span> Key Surveillance &amp; Downside Risk
+                    </div>
+                    <div style="font-size: 0.8rem; color: #e2e8f0; line-height: 1.5;">
+                        {{ h.risk_factor }}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Chart.js Visualization Scripts -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // 1. Sector Allocation Donut Chart
+    try {
+        const secLabels = {{ sec_labels_json|safe }};
+        const secWeights = {{ sec_weights_json|safe }};
+        const ctxSec = document.getElementById('topSecChart');
+        if (ctxSec && secLabels.length > 0) {
+            new Chart(ctxSec, {
+                type: 'doughnut',
+                data: {
+                    labels: secLabels,
+                    datasets: [{
+                        data: secWeights,
+                        backgroundColor: [
+                            '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899',
+                            '#06b6d4', '#14b8a6', '#f97316', '#64748b'
+                        ],
+                        borderColor: '#0f172a',
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { color: '#94a3b8', font: { size: 10 }, boxWidth: 10 }
+                        }
+                    }
+                }
+            });
+        }
+    } catch (err) {
+        console.error("Top portfolio sector chart error:", err);
+    }
+
+    // 2. Market Cap Distribution Chart
+    try {
+        const mcapLabels = {{ mcap_labels_json|safe }};
+        const mcapWeights = {{ mcap_weights_json|safe }};
+        const ctxMcap = document.getElementById('topMcapChart');
+        if (ctxMcap && mcapLabels.length > 0) {
+            new Chart(ctxMcap, {
+                type: 'pie',
+                data: {
+                    labels: mcapLabels,
+                    datasets: [{
+                        data: mcapWeights,
+                        backgroundColor: ['#10b981', '#3b82f6', '#f59e0b', '#ec4899', '#ef4444', '#64748b'],
+                        borderColor: '#0f172a',
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { color: '#94a3b8', font: { size: 10 }, boxWidth: 10 }
+                        }
+                    }
+                }
+            });
+        }
+    } catch (err) {
+        console.error("Top portfolio mcap chart error:", err);
+    }
+});
+
+async function syncLivePrices(portfolioId) {
+    const btn = document.getElementById('btnSyncPrices');
+    const icon = document.getElementById('syncIcon');
+    const text = document.getElementById('syncText');
+    if (btn) btn.disabled = true;
+    if (icon) icon.textContent = '⏳';
+    if (text) text.textContent = 'Syncing Quotes...';
+
+    try {
+        const resp = await fetch(`/portfolio/top-portfolios/${portfolioId}/sync-prices/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        });
+        if (!resp.ok) {
+            const errText = await resp.text();
+            throw new Error(`Server status ${resp.status}`);
+        }
+        const data = await resp.json();
+        if (data.status === 'success') {
+            const toast = document.createElement('div');
+            toast.style.cssText = 'position: fixed; bottom: 24px; right: 24px; background: #10b981; color: #fff; padding: 12px 20px; border-radius: 8px; font-weight: 700; box-shadow: 0 4px 16px rgba(0,0,0,0.4); z-index: 9999; font-size: 0.9rem;';
+            toast.textContent = '✅ ' + data.message;
+            document.body.appendChild(toast);
+            setTimeout(() => {
+                window.location.reload();
+            }, 800);
+        } else {
+            alert('Price sync: ' + (data.error || 'Failed to sync'));
+            if (btn) btn.disabled = false;
+            if (icon) icon.textContent = '🔄';
+            if (text) text.textContent = 'Sync Live Prices';
+        }
+    } catch (err) {
+        console.error('Error syncing prices:', err);
+        alert('Synchronization notice: ' + err.message);
+        if (btn) btn.disabled = false;
+        if (icon) icon.textContent = '🔄';
+        if (text) text.textContent = 'Sync Live Prices';
+    }
+}
+</script>
+{% endblock %}

@@ -1,0 +1,165 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Multi-Factor Stock Screener & Rankings - AI Stock Research Agent{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 1rem;">
+    <div>
+        <h1 style="font-size: 1.75rem; font-weight: 800; color: #fff; letter-spacing: -0.02em;">Multi-Factor Stock Screener & Rankings</h1>
+        <p class="text-secondary" style="font-size: 0.9rem;">Deterministic quantitative factor scoring across Quality, Growth, Valuation, Momentum, and Risk</p>
+    </div>
+    <div style="display: flex; gap: 0.75rem;">
+        <a href="{% url 'rankings:export_csv' %}" class="btn-primary" style="text-decoration: none; display: flex; align-items: center; gap: 0.4rem;">
+            <span>📥</span>
+            <span>Export CSV</span>
+        </a>
+        <a href="/api/v1/rankings/" target="_blank" class="btn-secondary" style="text-decoration: none; display: flex; align-items: center; gap: 0.4rem;">
+            <span>⚡</span>
+            <span>JSON API</span>
+        </a>
+    </div>
+</div>
+
+<!-- Filters Bar -->
+<div class="fin-card" style="padding: 1.25rem;">
+    <form method="GET" action="{% url 'rankings:screener' %}" style="display: flex; flex-wrap: wrap; gap: 1rem; align-items: flex-end;">
+        <div>
+            <label class="kpi-label" style="display: block; margin-bottom: 0.35rem;">Exchange</label>
+            <select name="exchange" class="fin-select" style="min-width: 120px;">
+                <option value="ALL" {% if selected_exchange == 'ALL' %}selected{% endif %}>All Exchanges</option>
+                <option value="NSE" {% if selected_exchange == 'NSE' %}selected{% endif %}>NSE Only</option>
+                <option value="BSE" {% if selected_exchange == 'BSE' %}selected{% endif %}>BSE Only</option>
+            </select>
+        </div>
+
+        <div>
+            <label class="kpi-label" style="display: block; margin-bottom: 0.35rem;">Sector</label>
+            <select name="sector" class="fin-select" style="min-width: 180px;">
+                <option value="ALL" {% if selected_sector == 'ALL' %}selected{% endif %}>All Sectors</option>
+                {% for sec in all_sectors %}
+                <option value="{{ sec }}" {% if selected_sector == sec %}selected{% endif %}>{{ sec }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div>
+            <label class="kpi-label" style="display: block; margin-bottom: 0.35rem;">Action Verdict</label>
+            <select name="action" class="fin-select" style="min-width: 140px;">
+                <option value="ALL" {% if selected_action == 'ALL' %}selected{% endif %}>All Actions</option>
+                <option value="Strong Buy" {% if selected_action == 'Strong Buy' %}selected{% endif %}>Strong Buy</option>
+                <option value="Research" {% if selected_action == 'Research' %}selected{% endif %}>Research</option>
+                <option value="Watch" {% if selected_action == 'Watch' %}selected{% endif %}>Watch</option>
+            </select>
+        </div>
+
+        <div>
+            <label class="kpi-label" style="display: block; margin-bottom: 0.35rem;">Min Composite Score</label>
+            <input type="number" name="min_score" min="0" max="100" class="fin-input" style="width: 120px;" value="{{ min_score|floatformat:0 }}">
+        </div>
+
+        <div>
+            <label class="kpi-label" style="display: block; margin-bottom: 0.35rem;">Search Symbol / Company</label>
+            <input type="text" name="search" class="fin-input" style="width: 180px;" placeholder="e.g. Reliance, TCS" value="{{ search }}">
+        </div>
+
+        <div>
+            <button type="submit" class="btn-primary">Apply Filters</button>
+            <a href="{% url 'rankings:screener' %}" class="btn-secondary" style="text-decoration: none; margin-left: 0.5rem;">Reset</a>
+        </div>
+    </form>
+</div>
+
+<!-- Screener Table Results -->
+<div class="fin-card">
+    <div class="fin-card-header">
+        <div class="fin-card-title">
+            <span>📋</span>
+            <span>Screened Watchlist ({{ total_results }} Equities)</span>
+        </div>
+        <span class="text-secondary font-mono" style="font-size: 0.8rem;">Evaluated: {% if evaluation_date %}{{ evaluation_date }}{% else %}{% now "Y-m-d" %}{% endif %}</span>
+    </div>
+
+    <div class="fin-table-container">
+        <table class="fin-table">
+            <thead>
+                <tr>
+                    <th>
+                        <a href="?sort_by=rank&order={% if sort_by == 'rank' and order == 'asc' %}desc{% else %}asc{% endif %}" style="color: inherit; text-decoration: none;">
+                            Rank {% if sort_by == 'rank' %}{% if order == 'asc' %}▲{% else %}▼{% endif %}{% endif %}
+                        </a>
+                    </th>
+                    <th>Ticker</th>
+                    <th>Company Name</th>
+                    <th>Sector</th>
+                    <th>
+                        <a href="?sort_by=price&order={% if sort_by == 'price' and order == 'asc' %}desc{% else %}asc{% endif %}" style="color: inherit; text-decoration: none;">
+                            Price (₹) {% if sort_by == 'price' %}{% if order == 'asc' %}▲{% else %}▼{% endif %}{% endif %}
+                        </a>
+                    </th>
+                    <th>
+                        <a href="?sort_by=change&order={% if sort_by == 'change' and order == 'desc' %}asc{% else %}desc{% endif %}" style="color: inherit; text-decoration: none;">
+                            Day Chg {% if sort_by == 'change' %}{% if order == 'desc' %}▼{% else %}▲{% endif %}{% endif %}
+                        </a>
+                    </th>
+                    <th>
+                        <a href="?sort_by=composite&order={% if sort_by == 'composite' and order == 'desc' %}asc{% else %}desc{% endif %}" style="color: inherit; text-decoration: none;">
+                            Composite Score {% if sort_by == 'composite' %}{% if order == 'desc' %}▼{% else %}▲{% endif %}{% endif %}
+                        </a>
+                    </th>
+                    <th>Quality</th>
+                    <th>Growth</th>
+                    <th>Valuation</th>
+                    <th>Momentum</th>
+                    <th>Action</th>
+                    <th>Analysis</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in rankings %}
+                <tr>
+                    <td class="font-mono" style="font-weight: 700; color: #60a5fa;">#{{ r.rank }}</td>
+                    <td>
+                        <a href="{% url 'research:stock_detail' r.stock.symbol %}" style="color: #60a5fa; font-weight: 700; text-decoration: none;">
+                            {{ r.stock.clean_symbol }}
+                        </a>
+                        <span style="font-size: 0.72rem; color: var(--text-muted); margin-left: 0.25rem;">{{ r.stock.exchange }}</span>
+                    </td>
+                    <td style="color: #fff; font-weight: 500;">{{ r.stock.name }}</td>
+                    <td class="text-secondary" style="font-size: 0.82rem;">{{ r.stock.sector }}</td>
+                    <td class="font-mono" style="font-weight: 600;">₹{{ r.stock.current_price|floatformat:2 }}</td>
+                    <td class="font-mono {% if r.stock.day_change_pct >= 0 %}text-positive{% else %}text-negative{% endif %}" style="font-weight: 600;">
+                        {% if r.stock.day_change_pct >= 0 %}+{% endif %}{{ r.stock.day_change_pct|floatformat:2 }}%
+                    </td>
+                    <td>
+                        <span class="score-badge {% if r.composite_score >= 70 %}score-high{% elif r.composite_score >= 50 %}score-med{% else %}score-low{% endif %}">
+                            {{ r.composite_score|floatformat:1 }}
+                        </span>
+                    </td>
+                    <td class="font-mono">{{ r.quality_score|floatformat:0 }}</td>
+                    <td class="font-mono">{{ r.growth_score|floatformat:0 }}</td>
+                    <td class="font-mono">{{ r.valuation_score|floatformat:0 }}</td>
+                    <td class="font-mono">{{ r.momentum_score|floatformat:0 }}</td>
+                    <td>
+                        <span class="action-badge {% if r.action == 'Strong Buy' %}action-strong-buy{% elif r.action == 'Research' %}action-research{% else %}action-watch{% endif %}">
+                            {{ r.action }}
+                        </span>
+                    </td>
+                    <td>
+                        <a href="{% url 'research:stock_detail' r.stock.symbol %}" class="btn-primary" style="padding: 0.25rem 0.65rem; font-size: 0.75rem; text-decoration: none;">
+                            Deep Dive
+                        </a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="13" style="text-align: center; color: var(--text-muted); padding: 3rem;">
+                        No stocks matched the specified filter criteria.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

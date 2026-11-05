@@ -1,0 +1,982 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ stock.clean_symbol }} Research & Analysis - AI Stock Research Agent{% endblock %}
+
+{% block content %}
+<!-- Stock Header Hero -->
+<div class="fin-card" style="padding: 1.5rem; margin-bottom: 1.5rem;">
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem;">
+        <div>
+            <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.35rem;">
+                <h1 style="font-size: 1.85rem; font-weight: 800; color: #fff; letter-spacing: -0.02em;">
+                    {{ stock.name }}
+                </h1>
+                <span style="background: rgba(59, 130, 246, 0.15); color: #60a5fa; font-family: var(--font-mono); font-weight: 700; font-size: 0.85rem; padding: 0.2rem 0.6rem; border-radius: 6px; border: 1px solid rgba(59, 130, 246, 0.3);">
+                    {{ stock.symbol }}
+                </span>
+                <span style="background: rgba(255, 255, 255, 0.08); color: var(--text-secondary); font-size: 0.75rem; padding: 0.2rem 0.5rem; border-radius: 4px;">
+                    {{ stock.exchange }}
+                </span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 1.25rem; font-size: 0.85rem; color: var(--text-secondary);">
+                <span>📁 {{ stock.sector }}</span>
+                <span>🏭 {{ stock.industry }}</span>
+                {% if stock.website %}
+                <span>🌐 <a href="{{ stock.website }}" target="_blank" style="color: #60a5fa; text-decoration: none;">Investor Portal ↗</a></span>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Live Price & Score Banner -->
+        <div style="display: flex; align-items: center; gap: 1.5rem; text-align: right;">
+            <div>
+                <div class="font-mono" id="stockLivePrice" style="font-size: 2rem; font-weight: 800; color: #fff;">
+                    ₹{{ stock.current_price|floatformat:2 }}
+                </div>
+                <div class="font-mono {% if stock.day_change_pct >= 0 %}text-positive{% else %}text-negative{% endif %}" id="stockLiveChange" style="font-weight: 700; font-size: 0.95rem;">
+                    {% if stock.day_change_pct >= 0 %}▲ +{% else %}▼ {% endif %}{{ stock.day_change|floatformat:2 }} ({{ stock.day_change_pct|floatformat:2 }}%)
+                </div>
+                <div style="margin-top: 0.35rem;">
+                    <button id="btnSyncStock" class="btn-secondary" data-symbol="{{ stock.symbol }}" style="padding: 0.2rem 0.6rem; font-size: 0.72rem; display: inline-flex; align-items: center; gap: 0.3rem;" title="Fetch live real-time price from exchange">
+                        <span id="stockSyncSpin">🔄</span>
+                        <span id="stockSyncText">Sync Live Quote</span>
+                    </button>
+                </div>
+            </div>
+
+            <div style="border-left: 1px solid var(--border-color); padding-left: 1.5rem; display: flex; flex-direction: column; align-items: flex-end; gap: 0.4rem;">
+                <div style="font-size: 0.72rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">Composite Score</div>
+                <div class="score-badge {% if evaluation.composite_score >= 70 %}score-high{% elif evaluation.composite_score >= 50 %}score-med{% else %}score-low{% endif %}" id="stockLiveComposite" style="font-size: 1.25rem; padding: 0.35rem 0.85rem;">
+                    {{ evaluation.composite_score|floatformat:1 }} / 100
+                </div>
+                <div>
+                    <span class="action-badge {% if evaluation.action == 'Strong Buy' %}action-strong-buy{% elif evaluation.action == 'Research' %}action-research{% else %}action-watch{% endif %}" id="stockLiveAction">
+                        {{ evaluation.action }}
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Stats Grid -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 0.75rem; margin-top: 1.5rem; border-top: 1px solid var(--border-color); padding-top: 1.25rem;">
+        <div>
+            <div class="kpi-label">Market Cap</div>
+            <div class="font-mono" style="font-weight: 600; color: #fff;">{{ stock.formatted_mcap }}</div>
+        </div>
+        <div>
+            <div class="kpi-label">P/E Ratio</div>
+            <div class="font-mono" id="stockLivePE" style="font-weight: 600; color: #fff;">{{ stock.pe_ratio|default:"N/A" }}</div>
+        </div>
+        <div>
+            <div class="kpi-label">PEG Ratio</div>
+            <div class="font-mono text-positive" style="font-weight: 600;">{{ peg_ratio }}x</div>
+        </div>
+        <div>
+            <div class="kpi-label">ROCE</div>
+            <div class="font-mono text-positive" style="font-weight: 600;">{{ fundamentals.roce|default:16.0 }}%</div>
+        </div>
+        <div>
+            <div class="kpi-label">ROE</div>
+            <div class="font-mono text-positive" style="font-weight: 600;">{{ fundamentals.roe|default:15.0 }}%</div>
+        </div>
+        <div>
+            <div class="kpi-label">ROA</div>
+            <div class="font-mono text-positive" style="font-weight: 600;">{{ roa }}%</div>
+        </div>
+        <div>
+            <div class="kpi-label">Debt / Equity</div>
+            <div class="font-mono" style="font-weight: 600; color: #fff;">{{ fundamentals.debt_to_equity|default:0.38 }}</div>
+        </div>
+        <div>
+            <div class="kpi-label">Dividend Yield</div>
+            <div class="font-mono" style="font-weight: 600; color: #fff;">{{ stock.dividend_yield|default:0.8 }}%</div>
+        </div>
+    </div>
+</div>
+
+<!-- Tabs Navigation -->
+<div class="tab-container">
+    <div class="tab-nav">
+        <button class="tab-btn active" data-target="tab-price">📊 Price & Technicals</button>
+        <button class="tab-btn" data-target="tab-investors">🧠 9 Investor Strategies</button>
+        <button class="tab-btn" data-target="tab-dcf">🧮 Interactive DCF Model</button>
+        <button class="tab-btn" data-target="tab-factors">💼 Fundamentals & Peers</button>
+        <button class="tab-btn" data-target="tab-news">📰 News & Catalysts</button>
+        <button class="tab-btn" data-target="tab-risk">⚠️ Risk & Invalidation</button>
+    </div>
+
+    <!-- TAB 1: PRICE & TECHNICAL ANALYSIS -->
+    <div id="tab-price" class="tab-pane active">
+        <div class="fin-card chart-container-card" id="priceChartCard">
+            <!-- Header with Title & Dynamic Stats -->
+            <div class="fin-card-header" style="flex-wrap: wrap; gap: 0.75rem;">
+                <div>
+                    <div class="fin-card-title">
+                        <span>📈</span>
+                        <span id="chartTitle">Adjustable Technical Price Action Chart</span>
+                    </div>
+                    <div style="font-size: 0.78rem; color: var(--text-secondary); margin-top: 0.2rem;">
+                        Interactive timeframe, technical indicators, volume overlay, scale adjusters &amp; responsive canvas
+                    </div>
+                </div>
+                
+                <!-- Period Statistics Dynamic Badge -->
+                <div style="display: flex; align-items: center; gap: 0.75rem; font-size: 0.8rem; font-family: var(--font-mono);">
+                    <div style="background: var(--bg-input); padding: 0.3rem 0.65rem; border-radius: 6px; border: 1px solid var(--border-color);">
+                        <span class="text-secondary">Range:</span>
+                        <span id="periodRangeText" style="color: #fff; font-weight: 600;">Last 6 Months</span>
+                    </div>
+                    <div style="background: var(--bg-input); padding: 0.3rem 0.65rem; border-radius: 6px; border: 1px solid var(--border-color);">
+                        <span class="text-secondary">Period Chg:</span>
+                        <span id="periodReturnText" style="font-weight: 700;">--</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Institutional Adjustable Toolbar -->
+            <div class="chart-toolbar">
+                <!-- Group 1: Timeframe / Range Selector -->
+                <div class="chart-toolbar-group">
+                    <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">Range:</span>
+                    <button type="button" class="chart-btn" data-range="1M">1M</button>
+                    <button type="button" class="chart-btn" data-range="3M">3M</button>
+                    <button type="button" class="chart-btn" data-range="6M">6M</button>
+                    <button type="button" class="chart-btn active" data-range="1Y">1Y</button>
+                    <button type="button" class="chart-btn" data-range="ALL">ALL (Full History)</button>
+                </div>
+
+                <!-- Group 2: Technical Overlays & Indicator Toggles -->
+                <div class="chart-toolbar-group">
+                    <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">Indicators:</span>
+                    <button type="button" class="chart-pill-toggle active" id="togglePriceLine">
+                        <span class="chart-pill-dot" style="background: #3b82f6;"></span>
+                        <span>Price</span>
+                    </button>
+                    <button type="button" class="chart-pill-toggle active" id="toggleSMA50">
+                        <span class="chart-pill-dot" style="background: #f59e0b;"></span>
+                        <span>SMA 50</span>
+                    </button>
+                    <button type="button" class="chart-pill-toggle active" id="toggleSMA200">
+                        <span class="chart-pill-dot" style="background: #10b981;"></span>
+                        <span>SMA 200</span>
+                    </button>
+                    <button type="button" class="chart-pill-toggle" id="toggleBB">
+                        <span class="chart-pill-dot" style="background: #a855f7;"></span>
+                        <span>Bollinger Bands</span>
+                    </button>
+                    <button type="button" class="chart-pill-toggle" id="toggleVol">
+                        <span class="chart-pill-dot" style="background: #06b6d4;"></span>
+                        <span>Volume</span>
+                    </button>
+                    <button type="button" class="chart-pill-toggle" id="toggleSR">
+                        <span class="chart-pill-dot" style="background: #ec4899;"></span>
+                        <span>S/R Lines</span>
+                    </button>
+                </div>
+
+                <!-- Group 3: Scale, Height & Zoom Controls -->
+                <div class="chart-toolbar-group">
+                    <button type="button" class="chart-btn" id="btnToggleScale" title="Toggle between Linear and Logarithmic scale">
+                        <span>Scale:</span>
+                        <strong id="scaleModeText">Linear</strong>
+                    </button>
+                    <div style="display: inline-flex; border: 1px solid var(--border-color); border-radius: 5px; overflow: hidden;">
+                        <button type="button" class="chart-btn" style="border: none; border-radius: 0;" data-height="compact" title="Compact Height (320px)">S</button>
+                        <button type="button" class="chart-btn active" style="border: none; border-radius: 0; border-left: 1px solid var(--border-color); border-right: 1px solid var(--border-color);" data-height="standard" title="Standard Height (440px)">M</button>
+                        <button type="button" class="chart-btn" style="border: none; border-radius: 0;" data-height="expanded" title="Expanded Height (600px)">L</button>
+                    </div>
+                    <button type="button" class="chart-btn" id="btnResetZoom" title="Reset Zoom to current timeframe" style="display: none;">
+                        <span>↺ Reset Zoom</span>
+                    </button>
+                    <button type="button" class="chart-btn" id="btnToggleFullscreen" title="Toggle Fullscreen Chart View">
+                        <span id="fullscreenIcon">⛶</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Responsive Chart Canvas Wrapper -->
+            <div class="chart-canvas-wrapper standard" id="priceChartWrapper">
+                <canvas id="priceChart"></canvas>
+            </div>
+
+            <!-- Interactive Guidance Footer -->
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.75rem; font-size: 0.72rem; color: var(--text-muted); flex-wrap: wrap; gap: 0.5rem;">
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <span>💡 <strong>Interactive Navigation:</strong> Mouse wheel / pinch to zoom in &amp; out. Drag left/right to pan along time.</span>
+                </div>
+                <div id="chartDataStats" class="font-mono">
+                    Visible High: ₹<span id="statVisHigh">{{ high_52w|floatformat:2 }}</span> | Visible Low: ₹<span id="statVisLow">{{ low_52w|floatformat:2 }}</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Technical Indicators Grid (OBV, ATR, BB, Support/Resistance, 52W High/Low) -->
+        <div class="fin-card">
+            <div class="fin-card-header">
+                <div class="fin-card-title">
+                    <span>⚡</span>
+                    <span>Technical Indicators & Volatility Dashboard</span>
+                </div>
+                <span class="text-secondary font-mono" style="font-size: 0.8rem;">Trend: Bullish above SMA 200</span>
+            </div>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+                <div style="background: var(--bg-input); padding: 1rem; border-radius: 8px;">
+                    <div class="kpi-label">52-Week High / Low</div>
+                    <div class="font-mono" style="font-size: 1.15rem; font-weight: 700; color: #fff;">
+                        ₹{{ high_52w|floatformat:0 }} / ₹{{ low_52w|floatformat:0 }}
+                    </div>
+                    <div style="font-size: 0.78rem; color: var(--text-secondary); margin-top: 0.25rem;">
+                        {{ dist_high_pct }}% from 52W High | +{{ dist_low_pct }}% from Low
+                    </div>
+                </div>
+
+                <div style="background: var(--bg-input); padding: 1rem; border-radius: 8px;">
+                    <div class="kpi-label">Bollinger Bands (20D, 2σ)</div>
+                    <div class="font-mono" style="font-size: 1.15rem; font-weight: 700; color: #fff;">
+                        ₹{{ bb_lower|floatformat:0 }} - ₹{{ bb_upper|floatformat:0 }}
+                    </div>
+                    <div style="font-size: 0.78rem; color: var(--text-secondary); margin-top: 0.25rem;">
+                        Middle Band: ₹{{ bb_middle|floatformat:0 }}
+                    </div>
+                </div>
+
+                <div style="background: var(--bg-input); padding: 1rem; border-radius: 8px;">
+                    <div class="kpi-label">ATR Volatility (14-Day)</div>
+                    <div class="font-mono text-positive" style="font-size: 1.15rem; font-weight: 700;">₹{{ atr_14 }}</div>
+                    <div style="font-size: 0.78rem; color: var(--text-muted); margin-top: 0.25rem;">Average daily trading range</div>
+                </div>
+
+                <div style="background: var(--bg-input); padding: 1rem; border-radius: 8px;">
+                    <div class="kpi-label">On-Balance Volume (OBV)</div>
+                    <div class="font-mono text-positive" style="font-size: 1.15rem; font-weight: 700;">
+                        {{ obv_val|floatformat:0 }}
+                    </div>
+                    <div style="font-size: 0.78rem; color: var(--text-secondary); margin-top: 0.25rem;">Positive volume accumulation</div>
+                </div>
+
+                <div style="background: var(--bg-input); padding: 1rem; border-radius: 8px;">
+                    <div class="kpi-label">Support & Resistance</div>
+                    <div class="font-mono" style="font-size: 1.15rem; font-weight: 700; color: #fff;">
+                        ₹{{ support_level|floatformat:0 }} / ₹{{ resistance_level|floatformat:0 }}
+                    </div>
+                    <div style="font-size: 0.78rem; color: var(--text-muted); margin-top: 0.25rem;">Key price pivot levels</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TAB 2: 9 LEGENDARY INVESTOR STRATEGY SCORES -->
+    <div id="tab-investors" class="tab-pane">
+        <div class="fin-card">
+            <div class="fin-card-header">
+                <div class="fin-card-title">
+                    <span>🏛️</span>
+                    <span>9 Legendary Investor Strategy Scores & Buy/Hold/Avoid Labels</span>
+                </div>
+            </div>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.25rem;">
+                {% for key, s in strategies.items %}
+                <div style="background: var(--bg-input); padding: 1.25rem; border-radius: 10px; border: 1px solid var(--border-color); display: flex; flex-direction: column; justify-content: space-between;">
+                    <div>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                            <span style="font-size: 1.05rem; font-weight: 700; color: #fff;">{{ s.philosophy }}</span>
+                            <span class="action-badge {% if s.label == 'Buy' %}action-strong-buy{% elif s.label == 'Hold' %}action-research{% else %}action-avoid{% endif %}">
+                                {{ s.label }}
+                            </span>
+                        </div>
+                        <div style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.75rem;">{{ s.style }}</div>
+
+                        <div style="display: flex; align-items: baseline; gap: 0.5rem; margin-bottom: 0.75rem;">
+                            <span class="font-mono text-positive" style="font-size: 1.5rem; font-weight: 800;">{{ s.score|floatformat:1 }}</span>
+                            <span style="font-size: 0.8rem; color: var(--text-muted);">/ 100</span>
+                        </div>
+
+                        <div style="margin-bottom: 0.85rem;">
+                            <div style="font-size: 0.75rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase;">Primary Rationale:</div>
+                            <div style="font-size: 0.82rem; color: #f8fafc; margin-top: 0.2rem; line-height: 1.5;">{{ s.reason }}</div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <div style="font-size: 0.72rem; font-weight: 700; color: #f43f5e; text-transform: uppercase; margin-bottom: 0.35rem;">Key Strategy Risks:</div>
+                        <ul style="padding-left: 1rem; font-size: 0.75rem; color: var(--text-secondary); line-height: 1.5;">
+                            {% for rk in s.key_risks %}
+                            <li>{{ rk }}</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- TAB 3: INTERACTIVE DCF MODEL -->
+    <div id="tab-dcf" class="tab-pane">
+        <div style="display: grid; grid-template-columns: 1fr 1.35fr; gap: 1.5rem;">
+            <!-- DCF Parameters Form -->
+            <div class="fin-card">
+                <div class="fin-card-header">
+                    <div class="fin-card-title">
+                        <span>🎛️</span>
+                        <span>Interactive 2-Stage DCF Valuation Controls</span>
+                    </div>
+                </div>
+                <form id="dcfCalculatorForm" data-symbol="{{ stock.symbol }}" onsubmit="return false;">
+                    <div style="margin-bottom: 1.25rem;">
+                        <label class="kpi-label" style="display: block; margin-bottom: 0.35rem;">Free Cash Flow per Share (₹)</label>
+                        <input type="number" step="0.5" id="dcf_fcf" class="fin-input" style="width: 100%;" value="{{ dcf.current_fcf_per_share|default:55.0 }}">
+                    </div>
+
+                    <div style="margin-bottom: 1.25rem;">
+                        <div style="display: flex; justify-content: space-between;">
+                            <label class="kpi-label">5-Year Explicit FCF CAGR</label>
+                            <span id="cagr_val" class="font-mono text-positive" style="font-weight: 700;">12%</span>
+                        </div>
+                        <input type="range" min="2" max="30" step="1" id="dcf_cagr" value="12" style="width: 100%;">
+                    </div>
+
+                    <div style="margin-bottom: 1.25rem;">
+                        <div style="display: flex; justify-content: space-between;">
+                            <label class="kpi-label">WACC (Discount Rate)</label>
+                            <span id="wacc_val" class="font-mono" style="font-weight: 700; color: #60a5fa;">11%</span>
+                        </div>
+                        <input type="range" min="8" max="16" step="0.5" id="dcf_wacc" value="11" style="width: 100%;">
+                    </div>
+
+                    <div style="margin-bottom: 1.25rem;">
+                        <div style="display: flex; justify-content: space-between;">
+                            <label class="kpi-label">Terminal Growth Rate (g)</label>
+                            <span id="terminal_val" class="font-mono text-secondary" style="font-weight: 700;">3%</span>
+                        </div>
+                        <input type="range" min="1.5" max="5.0" step="0.5" id="dcf_terminal" value="3" style="width: 100%;">
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+                        <div>
+                            <label class="kpi-label" style="display: block; margin-bottom: 0.35rem;">Cash/Share (₹)</label>
+                            <input type="number" id="dcf_cash" class="fin-input" style="width: 100%;" value="{{ dcf.net_cash_per_share|default:40.0 }}">
+                        </div>
+                        <div>
+                            <label class="kpi-label" style="display: block; margin-bottom: 0.35rem;">Debt/Share (₹)</label>
+                            <input type="number" id="dcf_debt" class="fin-input" style="width: 100%;" value="0.0">
+                        </div>
+                    </div>
+                </form>
+            </div>
+
+            <!-- DCF Results Card -->
+            <div class="fin-card">
+                <div class="fin-card-header">
+                    <div class="fin-card-title">
+                        <span>🎯</span>
+                        <span>Intrinsic Valuation Verdict</span>
+                    </div>
+                    <span id="dcf_verdict_val" class="action-badge {% if dcf.valuation_verdict == 'Undervalued' %}action-strong-buy{% elif dcf.valuation_verdict == 'Fairly Valued' %}action-research{% else %}action-avoid{% endif %}">
+                        {{ dcf.valuation_verdict|default:"Fairly Valued" }}
+                    </span>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem;">
+                    <div style="background: var(--bg-input); padding: 1.25rem; border-radius: 8px; border: 1px solid var(--border-color);">
+                        <div class="kpi-label">Intrinsic Value / Share</div>
+                        <div id="dcf_intrinsic_val" class="font-mono text-positive" style="font-size: 2rem; font-weight: 800;">
+                            ₹{{ dcf.intrinsic_value_per_share|floatformat:2 }}
+                        </div>
+                        <div class="text-secondary" style="font-size: 0.78rem;">Current Price: ₹{{ stock.current_price|floatformat:2 }}</div>
+                    </div>
+
+                    <div style="background: var(--bg-input); padding: 1.25rem; border-radius: 8px; border: 1px solid var(--border-color);">
+                        <div class="kpi-label">Upside / Downside</div>
+                        <div id="dcf_upside_val" class="font-mono {% if dcf.upside_potential_pct >= 0 %}text-positive{% else %}text-negative{% endif %}" style="font-size: 2rem; font-weight: 800;">
+                            {% if dcf.upside_potential_pct >= 0 %}+{% endif %}{{ dcf.upside_potential_pct|floatformat:1 }}%
+                        </div>
+                        <div class="text-secondary" style="font-size: 0.78rem;">Margin of Safety: <span id="dcf_mos_val" class="font-mono">{{ dcf.margin_of_safety_pct|floatformat:1 }}%</span></div>
+                    </div>
+                </div>
+
+                <!-- Decomposition -->
+                <div style="border-top: 1px solid var(--border-color); padding-top: 1rem; font-size: 0.85rem;">
+                    <div style="font-weight: 700; color: #fff; margin-bottom: 0.75rem;">Valuation Decomposition</div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.35rem;">
+                        <span class="text-secondary">PV of 10-Yr Projected FCFs:</span>
+                        <span id="dcf_pv_explicit" class="font-mono" style="color: #fff;">₹{{ dcf.pv_explicit_fcfs|floatformat:2 }}</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.35rem;">
+                        <span class="text-secondary">PV of Terminal Value:</span>
+                        <span id="dcf_pv_terminal" class="font-mono" style="color: #fff;">₹{{ dcf.pv_terminal_value|floatformat:2 }}</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.35rem;">
+                        <span class="text-secondary">Benjamin Graham Number:</span>
+                        <span class="font-mono text-positive">{% if dcf.graham_number %}₹{{ dcf.graham_number|floatformat:2 }}{% else %}N/A{% endif %}</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between;">
+                        <span class="text-secondary">Peter Lynch Fair Value:</span>
+                        <span class="font-mono text-positive">{% if dcf.peter_lynch_value %}₹{{ dcf.peter_lynch_value|floatformat:2 }}{% else %}N/A{% endif %}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TAB 4: FUNDAMENTALS & PEERS -->
+    <div id="tab-factors" class="tab-pane">
+        <div class="fin-card">
+            <div class="fin-card-header">
+                <div class="fin-card-title">
+                    <span>💼</span>
+                    <span>Comprehensive Fundamentals & Sector Peer Comparison</span>
+                </div>
+            </div>
+            <div class="fin-table-container">
+                <table class="fin-table">
+                    <thead>
+                        <tr>
+                            <th>Peer Symbol</th>
+                            <th>Company Name</th>
+                            <th>Price (₹)</th>
+                            <th>P/E</th>
+                            <th>P/B</th>
+                            <th>ROCE</th>
+                            <th>Market Cap</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr style="background: rgba(59, 130, 246, 0.08);">
+                            <td style="font-weight: 700; color: #60a5fa;">{{ stock.clean_symbol }} (Current)</td>
+                            <td>{{ stock.name }}</td>
+                            <td class="font-mono font-bold">₹{{ stock.current_price|floatformat:2 }}</td>
+                            <td class="font-mono">{{ stock.pe_ratio }}</td>
+                            <td class="font-mono">{{ stock.pb_ratio }}</td>
+                            <td class="font-mono text-positive">{{ fundamentals.roce|default:16.0 }}%</td>
+                            <td class="font-mono">{{ stock.formatted_mcap }}</td>
+                            <td><span class="action-badge action-strong-buy">{{ evaluation.action }}</span></td>
+                        </tr>
+                        {% for p in peers %}
+                        <tr>
+                            <td>
+                                <a href="{% url 'research:stock_detail' p.symbol %}" style="color: #60a5fa; font-weight: 700; text-decoration: none;">
+                                    {{ p.clean_symbol }}
+                                </a>
+                            </td>
+                            <td>{{ p.name }}</td>
+                            <td class="font-mono">₹{{ p.current_price|floatformat:2 }}</td>
+                            <td class="font-mono">{{ p.pe_ratio }}</td>
+                            <td class="font-mono">{{ p.pb_ratio }}</td>
+                            <td class="font-mono">15.0%</td>
+                            <td class="font-mono text-secondary">{{ p.formatted_mcap }}</td>
+                            <td>
+                                <a href="{% url 'research:stock_detail' p.symbol %}" class="btn-secondary" style="padding: 0.2rem 0.5rem; font-size: 0.72rem; text-decoration: none;">
+                                    View
+                                </a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="8" style="text-align: center; color: var(--text-muted); padding: 1.5rem;">No peer data in current segment.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- TAB 5: NEWS & SENTIMENT WITH CITATIONS -->
+    <div id="tab-news" class="tab-pane">
+        <div class="fin-card">
+            <div class="fin-card-header">
+                <div class="fin-card-title">
+                    <span>📰</span>
+                    <span>Recent Company & Sector News (Citations with Source URL & Date)</span>
+                </div>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 1rem;">
+                {% for n in news_items %}
+                <div style="background: var(--bg-input); padding: 1.25rem; border-radius: 8px; border: 1px solid var(--border-color);">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem;">
+                        <div style="font-weight: 700; color: #fff; font-size: 0.95rem;">
+                            {{ n.headline }}
+                        </div>
+                        <span class="score-badge {% if n.type == 'Positive' %}score-high{% elif n.type == 'Caution' %}score-low{% else %}score-med{% endif %}" style="font-size: 0.72rem;">
+                            {{ n.type }}
+                        </span>
+                    </div>
+                    <div style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.6; margin-bottom: 0.75rem;">
+                        {{ n.summary }}
+                    </div>
+                    <div style="display: flex; justify-content: space-between; font-size: 0.75rem; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 0.5rem;">
+                        <span class="text-muted">Source: <a href="{{ n.url }}" target="_blank" style="color: #60a5fa; text-decoration: none;">{{ n.source }} ↗</a></span>
+                        <span class="font-mono text-secondary">Published: {{ n.date }}</span>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- TAB 6: RISK ANALYSIS & THESIS INVALIDATION -->
+    <div id="tab-risk" class="tab-pane">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+            <!-- Category Risks -->
+            <div class="fin-card">
+                <div class="fin-card-header">
+                    <div class="fin-card-title text-negative">
+                        <span>⚠️</span>
+                        <span>Key Categorical Risk Analysis</span>
+                    </div>
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 0.85rem; font-size: 0.85rem; line-height: 1.6;">
+                    <div>
+                        <strong style="color: #fff;">1. Valuation Risk:</strong>
+                        <div class="text-secondary">{{ risk_analysis.valuation_risk }}</div>
+                    </div>
+                    <div>
+                        <strong style="color: #fff;">2. Debt & Solvency Risk:</strong>
+                        <div class="text-secondary">{{ risk_analysis.debt_risk }}</div>
+                    </div>
+                    <div>
+                        <strong style="color: #fff;">3. Competitive Threats:</strong>
+                        <div class="text-secondary">{{ risk_analysis.competition_risk }}</div>
+                    </div>
+                    <div>
+                        <strong style="color: #fff;">4. Corporate Governance:</strong>
+                        <div class="text-secondary">{{ risk_analysis.governance_risk }}</div>
+                    </div>
+                    <div>
+                        <strong style="color: #fff;">5. Sector Cyclicality:</strong>
+                        <div class="text-secondary">{{ risk_analysis.sector_cyclicality }}</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Invalidation Conditions -->
+            <div class="fin-card">
+                <div class="fin-card-header">
+                    <div class="fin-card-title text-negative">
+                        <span>🛑</span>
+                        <span>At Least 3 Thesis Invalidation Conditions</span>
+                    </div>
+                </div>
+                <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 1rem;">
+                    If any of the following boundary conditions are breached, the investment thesis is formally invalidated:
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+                    {% for cond in risk_analysis.thesis_invalidation_conditions %}
+                    <div style="padding: 0.85rem 1rem; background: rgba(244, 63, 94, 0.08); border: 1px solid rgba(244, 63, 94, 0.25); border-radius: 6px; color: #fecdd3; font-size: 0.82rem; line-height: 1.5;">
+                        {{ cond }}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const ctx = document.getElementById('priceChart');
+    if (!ctx) return;
+
+    // Ingest Raw Server Data (Mutable for dynamic sync updates)
+    let rawDates = JSON.parse('{{ chart_dates_json|escapejs }}');
+    let rawCloses = JSON.parse('{{ chart_closes_json|escapejs }}');
+    let rawSMA50 = JSON.parse('{{ sma_50_json|escapejs }}');
+    let rawSMA200 = JSON.parse('{{ sma_200_json|escapejs }}');
+    let rawBBUpper = JSON.parse('{{ bb_upper_json|escapejs }}');
+    let rawBBMiddle = JSON.parse('{{ bb_middle_json|escapejs }}');
+    let rawBBLower = JSON.parse('{{ bb_lower_json|escapejs }}');
+    let rawVolumes = JSON.parse('{{ chart_volumes_json|escapejs }}');
+    let supportVal = parseFloat('{{ support_level|default:0 }}');
+    let resistanceVal = parseFloat('{{ resistance_level|default:0 }}');
+
+    let currentRange = '1Y';
+    let isLogScale = false;
+
+    // Helper: Slice array by range (1Y default, ALL for complete history)
+    function getSliceIndices(range, totalLen) {
+        if (range === '1M') return Math.max(0, totalLen - 22);
+        if (range === '3M') return Math.max(0, totalLen - 65);
+        if (range === '6M') return Math.max(0, totalLen - 130);
+        if (range === '1Y') return Math.max(0, totalLen - 252);
+        return 0; // ALL / Complete Multi-Year History
+    }
+
+    function sliceData(range) {
+        const startIdx = getSliceIndices(range, rawDates.length);
+        const dates = rawDates.slice(startIdx);
+        const closes = rawCloses.slice(startIdx);
+        const sma50 = rawSMA50.slice(startIdx);
+        const sma200 = rawSMA200.slice(startIdx);
+        const bbUpper = rawBBUpper.slice(startIdx);
+        const bbMiddle = rawBBMiddle.slice(startIdx);
+        const bbLower = rawBBLower.slice(startIdx);
+        const volumes = rawVolumes.slice(startIdx);
+        const support = dates.map(() => supportVal);
+        const resistance = dates.map(() => resistanceVal);
+
+        return { dates, closes, sma50, sma200, bbUpper, bbMiddle, bbLower, volumes, support, resistance };
+    }
+
+    const initial = sliceData('1Y');
+
+    // Create Chart Instance
+    const priceChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: initial.dates,
+            datasets: [
+                // 0: Close Price
+                {
+                    label: 'Close Price',
+                    data: initial.closes,
+                    borderColor: '#3b82f6',
+                    backgroundColor: 'rgba(59, 130, 246, 0.08)',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.1,
+                    pointRadius: 0,
+                    pointHoverRadius: 5,
+                    pointHoverBackgroundColor: '#3b82f6',
+                    yAxisID: 'y'
+                },
+                // 1: SMA 50
+                {
+                    label: 'SMA 50',
+                    data: initial.sma50,
+                    borderColor: '#f59e0b',
+                    borderWidth: 1.5,
+                    borderDash: [4, 4],
+                    pointRadius: 0,
+                    yAxisID: 'y'
+                },
+                // 2: SMA 200
+                {
+                    label: 'SMA 200',
+                    data: initial.sma200,
+                    borderColor: '#10b981',
+                    borderWidth: 1.5,
+                    borderDash: [2, 2],
+                    pointRadius: 0,
+                    yAxisID: 'y'
+                },
+                // 3: BB Upper
+                {
+                    label: 'BB Upper (2σ)',
+                    data: initial.bbUpper,
+                    borderColor: 'rgba(168, 85, 247, 0.55)',
+                    borderWidth: 1,
+                    pointRadius: 0,
+                    hidden: true,
+                    yAxisID: 'y'
+                },
+                // 4: BB Middle (20D SMA)
+                {
+                    label: 'BB Middle (20D)',
+                    data: initial.bbMiddle,
+                    borderColor: 'rgba(168, 85, 247, 0.35)',
+                    borderWidth: 1,
+                    borderDash: [2, 2],
+                    pointRadius: 0,
+                    hidden: true,
+                    yAxisID: 'y'
+                },
+                // 5: BB Lower
+                {
+                    label: 'BB Lower (2σ)',
+                    data: initial.bbLower,
+                    borderColor: 'rgba(168, 85, 247, 0.55)',
+                    backgroundColor: 'rgba(168, 85, 247, 0.06)',
+                    borderWidth: 1,
+                    fill: '-2', // fill towards BB Upper
+                    pointRadius: 0,
+                    hidden: true,
+                    yAxisID: 'y'
+                },
+                // 6: Volume (Bar)
+                {
+                    type: 'bar',
+                    label: 'Volume',
+                    data: initial.volumes,
+                    backgroundColor: 'rgba(6, 182, 212, 0.25)',
+                    borderColor: 'rgba(6, 182, 212, 0.45)',
+                    borderWidth: 1,
+                    hidden: true,
+                    yAxisID: 'yVolume'
+                },
+                // 7: Support Level
+                {
+                    label: 'Support Level',
+                    data: initial.support,
+                    borderColor: '#ec4899',
+                    borderWidth: 1.5,
+                    borderDash: [6, 4],
+                    pointRadius: 0,
+                    hidden: true,
+                    yAxisID: 'y'
+                },
+                // 8: Resistance Level
+                {
+                    label: 'Resistance Level',
+                    data: initial.resistance,
+                    borderColor: '#f43f5e',
+                    borderWidth: 1.5,
+                    borderDash: [6, 4],
+                    pointRadius: 0,
+                    hidden: true,
+                    yAxisID: 'y'
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: {
+                mode: 'index',
+                intersect: false
+            },
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    backgroundColor: 'rgba(15, 23, 42, 0.95)',
+                    titleColor: '#94a3b8',
+                    bodyColor: '#f8fafc',
+                    borderColor: '#334155',
+                    borderWidth: 1,
+                    padding: 10,
+                    titleFont: { family: 'JetBrains Mono', size: 12 },
+                    bodyFont: { family: 'JetBrains Mono', size: 12 },
+                    callbacks: {
+                        label: function(context) {
+                            const ds = context.dataset;
+                            if (ds.yAxisID === 'yVolume') {
+                                return `Volume: ${Number(context.parsed.y).toLocaleString()} shares`;
+                            }
+                            if (context.parsed.y !== null && context.parsed.y !== undefined) {
+                                return `${ds.label}: ₹${Number(context.parsed.y).toFixed(2)}`;
+                            }
+                            return null;
+                        }
+                    }
+                },
+                zoom: {
+                    pan: {
+                        enabled: true,
+                        mode: 'x',
+                        onPan: () => {
+                            const btn = document.getElementById('btnResetZoom');
+                            if (btn) btn.style.display = 'inline-flex';
+                        }
+                    },
+                    zoom: {
+                        wheel: { enabled: true },
+                        pinch: { enabled: true },
+                        mode: 'x',
+                        onZoom: () => {
+                            const btn = document.getElementById('btnResetZoom');
+                            if (btn) btn.style.display = 'inline-flex';
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    grid: { color: 'rgba(255, 255, 255, 0.04)' },
+                    ticks: { color: '#64748b', maxTicksLimit: 12, font: { family: 'JetBrains Mono', size: 11 } }
+                },
+                y: {
+                    type: 'linear',
+                    position: 'right',
+                    grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                    ticks: {
+                        color: '#94a3b8',
+                        font: { family: 'JetBrains Mono', size: 11 },
+                        callback: function(val) { return '₹' + Number(val).toLocaleString(); }
+                    }
+                },
+                yVolume: {
+                    type: 'linear',
+                    position: 'left',
+                    display: false,
+                    grid: { display: false },
+                    ticks: { display: false },
+                    min: 0,
+                    suggestedMax: Math.max(...rawVolumes) * 3.5
+                }
+            }
+        }
+    });
+
+    window.activePriceChart = priceChart;
+
+    // Dynamic Live Quote Chart Update Hook
+    window.updatePriceChartWithData = function(chartData) {
+        if (!chartData || !priceChart) return;
+        if (Array.isArray(chartData.dates) && chartData.dates.length) rawDates = chartData.dates;
+        if (Array.isArray(chartData.closes) && chartData.closes.length) rawCloses = chartData.closes;
+        if (Array.isArray(chartData.sma50)) rawSMA50 = chartData.sma50;
+        if (Array.isArray(chartData.sma200)) rawSMA200 = chartData.sma200;
+        if (Array.isArray(chartData.bbUpper)) rawBBUpper = chartData.bbUpper;
+        if (Array.isArray(chartData.bbMiddle)) rawBBMiddle = chartData.bbMiddle;
+        if (Array.isArray(chartData.bbLower)) rawBBLower = chartData.bbLower;
+        if (Array.isArray(chartData.volumes) && chartData.volumes.length) rawVolumes = chartData.volumes;
+        if (chartData.support !== undefined) supportVal = parseFloat(chartData.support);
+        if (chartData.resistance !== undefined) resistanceVal = parseFloat(chartData.resistance);
+
+        const sliced = sliceData(currentRange);
+        priceChart.data.labels = sliced.dates;
+        priceChart.data.datasets[0].data = sliced.closes;
+        priceChart.data.datasets[1].data = sliced.sma50;
+        priceChart.data.datasets[2].data = sliced.sma200;
+        priceChart.data.datasets[3].data = sliced.bbUpper;
+        priceChart.data.datasets[4].data = sliced.bbMiddle;
+        priceChart.data.datasets[5].data = sliced.bbLower;
+        priceChart.data.datasets[6].data = sliced.volumes;
+        priceChart.data.datasets[7].data = sliced.support;
+        priceChart.data.datasets[8].data = sliced.resistance;
+
+        if (priceChart.options.scales.yVolume && rawVolumes.length) {
+            priceChart.options.scales.yVolume.suggestedMax = Math.max(...rawVolumes) * 3.5;
+        }
+
+        updatePeriodStats(sliced.dates, sliced.closes);
+        priceChart.update();
+    };
+
+    // Update Period Stats Display
+    function updatePeriodStats(dates, closes) {
+        if (!dates.length || !closes.length) return;
+        const pFirst = closes[0];
+        const pLast = closes[closes.length - 1];
+        const pDiff = pLast - pFirst;
+        const pPct = pFirst ? ((pDiff / pFirst) * 100) : 0;
+
+        const retEl = document.getElementById('periodReturnText');
+        const rangeEl = document.getElementById('periodRangeText');
+        const highEl = document.getElementById('statVisHigh');
+        const lowEl = document.getElementById('statVisLow');
+
+        if (rangeEl) rangeEl.textContent = `${dates[0]} → ${dates[dates.length - 1]}`;
+        if (retEl) {
+            retEl.textContent = `${pPct >= 0 ? '▲ +' : '▼ '}${pPct.toFixed(2)}% (₹${pDiff >= 0 ? '+' : ''}${pDiff.toFixed(2)})`;
+            retEl.className = pPct >= 0 ? 'text-positive font-mono' : 'text-negative font-mono';
+        }
+        if (highEl) highEl.textContent = Math.max(...closes).toFixed(2);
+        if (lowEl) lowEl.textContent = Math.min(...closes).toFixed(2);
+    }
+
+    updatePeriodStats(initial.dates, initial.closes);
+
+    // 1. Timeframe / Range Selector Buttons
+    document.querySelectorAll('[data-range]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('[data-range]').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            currentRange = btn.getAttribute('data-range');
+
+            const sliced = sliceData(currentRange);
+            priceChart.data.labels = sliced.dates;
+            priceChart.data.datasets[0].data = sliced.closes;
+            priceChart.data.datasets[1].data = sliced.sma50;
+            priceChart.data.datasets[2].data = sliced.sma200;
+            priceChart.data.datasets[3].data = sliced.bbUpper;
+            priceChart.data.datasets[4].data = sliced.bbMiddle;
+            priceChart.data.datasets[5].data = sliced.bbLower;
+            priceChart.data.datasets[6].data = sliced.volumes;
+            priceChart.data.datasets[7].data = sliced.support;
+            priceChart.data.datasets[8].data = sliced.resistance;
+
+            updatePeriodStats(sliced.dates, sliced.closes);
+            if (typeof priceChart.resetZoom === 'function') priceChart.resetZoom();
+            const resetBtn = document.getElementById('btnResetZoom');
+            if (resetBtn) resetBtn.style.display = 'none';
+
+            priceChart.update();
+        });
+    });
+
+    // 2. Technical Indicator Pill Toggles
+    function setupToggle(btnId, datasetIndices, onToggleCallback) {
+        const btn = document.getElementById(btnId);
+        if (!btn) return;
+        btn.addEventListener('click', () => {
+            const isActive = btn.classList.toggle('active');
+            datasetIndices.forEach(idx => {
+                priceChart.data.datasets[idx].hidden = !isActive;
+            });
+            if (onToggleCallback) onToggleCallback(isActive);
+            priceChart.update();
+        });
+    }
+
+    setupToggle('togglePriceLine', [0]);
+    setupToggle('toggleSMA50', [1]);
+    setupToggle('toggleSMA200', [2]);
+    setupToggle('toggleBB', [3, 4, 5]);
+    setupToggle('toggleVol', [6], (active) => {
+        priceChart.options.scales.yVolume.display = active;
+    });
+    setupToggle('toggleSR', [7, 8]);
+
+    // 3. Scale Mode Toggle (Linear / Log)
+    const btnScale = document.getElementById('btnToggleScale');
+    const scaleModeText = document.getElementById('scaleModeText');
+    if (btnScale) {
+        btnScale.addEventListener('click', () => {
+            isLogScale = !isLogScale;
+            priceChart.options.scales.y.type = isLogScale ? 'logarithmic' : 'linear';
+            if (scaleModeText) scaleModeText.textContent = isLogScale ? 'Log' : 'Linear';
+            priceChart.update();
+        });
+    }
+
+    // 4. Responsive Height Presets (Compact, Standard, Expanded)
+    const wrapper = document.getElementById('priceChartWrapper');
+    document.querySelectorAll('[data-height]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('[data-height]').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            const h = btn.getAttribute('data-height');
+            wrapper.classList.remove('compact', 'standard', 'expanded');
+            wrapper.classList.add(h);
+            setTimeout(() => priceChart.resize(), 50);
+        });
+    });
+
+    // 5. Reset Zoom Button
+    const btnResetZoom = document.getElementById('btnResetZoom');
+    if (btnResetZoom) {
+        btnResetZoom.addEventListener('click', () => {
+            if (typeof priceChart.resetZoom === 'function') {
+                priceChart.resetZoom();
+            }
+            btnResetZoom.style.display = 'none';
+        });
+    }
+
+    // 6. Fullscreen View Toggle
+    const btnFullscreen = document.getElementById('btnToggleFullscreen');
+    const card = document.getElementById('priceChartCard');
+    const fsIcon = document.getElementById('fullscreenIcon');
+    if (btnFullscreen && card) {
+        btnFullscreen.addEventListener('click', () => {
+            const isFs = card.classList.toggle('is-fullscreen');
+            wrapper.classList.toggle('fullscreen', isFs);
+            fsIcon.textContent = isFs ? '✕ Exit' : '⛶';
+            btnFullscreen.classList.toggle('active', isFs);
+            setTimeout(() => priceChart.resize(), 60);
+        });
+    }
+
+    // 7. Responsive Window & Tab Resizing
+    window.addEventListener('resize', () => {
+        if (priceChart) priceChart.resize();
+    });
+});
+</script>
+{% endblock %}

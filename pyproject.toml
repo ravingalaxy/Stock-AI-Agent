@@ -1,0 +1,59 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "stock-ai-agent"
+version = "1.0.0"
+description = "AI Stock Market Research & Ranking Agent for NSE and BSE"
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [
+    { name = "AI Agent Engineering Team" }
+]
+dependencies = [
+    "django>=5.0.0",
+    "djangorestframework>=3.14.0",
+    "yfinance>=0.2.36",
+    "pandas>=2.1.0",
+    "numpy>=1.26.0",
+    "scipy>=1.11.0",
+    "ta>=0.11.0",
+    "openpyxl>=3.1.2",
+    "python-docx>=1.1.0",
+    "pypdf>=4.0.0",
+    "fpdf2>=2.7.8",
+    "pillow>=10.2.0",
+    "openai>=1.12.0",
+    "chromadb>=0.4.22",
+    "pydantic>=2.5.0",
+    "pydantic-settings>=2.1.0",
+    "sqlalchemy>=2.0.0",
+    "requests>=2.31.0",
+    "feedparser>=6.0.10",
+    "beautifulsoup4>=4.12.0",
+    "lxml>=5.0.0",
+    "streamlit>=1.31.0",
+    "plotly>=5.18.0",
+    "python-dotenv>=1.0.0",
+    "pyyaml>=6.0.1",
+    "rich>=13.7.0",
+    "typer>=0.9.0",
+    "apscheduler>=3.10.4",
+    "pytz>=2024.1",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-cov>=4.1.0",
+    "black>=24.1.0",
+    "ruff>=0.2.0"
+]
+
+[tool.pytest.ini_options]
+pythonpath = [".", "src"]
+testpaths = ["tests"]
+
+[project.scripts]
+stock-agent = "src.main:app"

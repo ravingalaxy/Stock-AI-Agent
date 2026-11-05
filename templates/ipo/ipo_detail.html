@@ -1,0 +1,330 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ ipo.company_name }} ({{ ipo.symbol }}) IPO Analysis &amp; 9 Strategies{% endblock %}
+
+{% block content %}
+<!-- Back link & Breadcrumbs -->
+<div style="margin-bottom: 1rem;">
+    <a href="{% url 'ipo:dashboard' %}" class="btn-secondary" style="padding: 0.35rem 0.75rem; font-size: 0.8rem; text-decoration: none; display: inline-flex; align-items: center; gap: 0.4rem;">
+        <span>←</span>
+        <span>Back to IPO Intelligence Center</span>
+    </a>
+</div>
+
+<!-- IPO Hero Card -->
+<div class="fin-card" style="padding: 1.5rem; margin-bottom: 1.5rem;">
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem;">
+        <div>
+            <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.35rem;">
+                <h1 style="font-size: 1.85rem; font-weight: 800; color: #fff; letter-spacing: -0.02em;">
+                    {{ ipo.company_name }}
+                </h1>
+                <span style="background: rgba(59, 130, 246, 0.15); color: #60a5fa; font-family: var(--font-mono); font-weight: 700; font-size: 0.85rem; padding: 0.2rem 0.6rem; border-radius: 6px; border: 1px solid rgba(59, 130, 246, 0.3);">
+                    {{ ipo.symbol }}
+                </span>
+                <span class="action-badge {% if ipo.status == 'Open' %}action-strong-buy{% elif ipo.status == 'Upcoming' %}action-watch{% else %}action-research{% endif %}">
+                    {{ ipo.status }}
+                </span>
+                <span style="background: rgba(255, 255, 255, 0.08); color: var(--text-secondary); font-size: 0.75rem; padding: 0.2rem 0.5rem; border-radius: 4px;">
+                    {{ ipo.category }}
+                </span>
+            </div>
+            <!-- Chittorgarh.com Authentication Banner -->
+            <div style="background: rgba(56, 189, 248, 0.08); border: 1px solid rgba(56, 189, 248, 0.25); border-radius: 6px; padding: 0.4rem 0.75rem; margin-bottom: 0.65rem; display: inline-flex; align-items: center; gap: 0.5rem; font-size: 0.82rem; font-family: var(--font-mono);">
+                <span style="color: #38bdf8; font-weight: 700;">Chittorgarh.com:</span>
+                <span style="color: #e2e8f0;">{{ ipo.chittorgarh_summary }}</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 1.25rem; font-size: 0.85rem; color: var(--text-secondary); flex-wrap: wrap;">
+                <span>📁 {{ ipo.sector }}</span>
+                <span>🏛️ {{ ipo.listing_exchange }}</span>
+                <span>🗓️ Bidding: <strong style="color: #fff;">{{ ipo.subscription_dates_display }}</strong></span>
+                {% if ipo.listing_date %}
+                    {% if ipo.status == 'Listed' %}
+                    <span>🎯 Listed On: <strong style="color: #60a5fa;">{{ ipo.listing_date|date:"D, M j, Y" }}</strong></span>
+                    {% else %}
+                    <span>🎯 Expected Listing: <strong style="color: #10b981;">{{ ipo.listing_date|date:"D, M j, Y" }}</strong></span>
+                    {% endif %}
+                {% endif %}
+                {% if ipo.is_closing_today %}
+                <span style="background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.5); font-weight: 800; font-size: 0.78rem; padding: 0.2rem 0.6rem; border-radius: 4px; display: inline-flex; align-items: center; gap: 0.3rem;">
+                    <span>⚡</span> FINAL BIDDING DAY: Closes Today at 5:00 PM IST
+                </span>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Issue Pricing & Score Header -->
+        <div style="display: flex; align-items: center; gap: 1.5rem; text-align: right;">
+            <div>
+                <div style="font-size: 0.72rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">Price Band</div>
+                <div class="font-mono" style="font-size: 1.85rem; font-weight: 800; color: #fff;">
+                    ₹{{ ipo.price_band_low|floatformat:0 }} - ₹{{ ipo.price_band_high|floatformat:0 }}
+                </div>
+                <div style="font-size: 0.8rem; color: var(--text-secondary);">
+                    Lot: <strong>{{ ipo.lot_size }} shares</strong> (₹{{ ipo.minimum_investment|floatformat:0 }})
+                </div>
+            </div>
+
+            <div style="border-left: 1px solid var(--border-color); padding-left: 1.5rem; display: flex; flex-direction: column; align-items: flex-end; gap: 0.35rem;">
+                <div style="font-size: 0.72rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">IPO Composite Score</div>
+                <div class="score-badge {% if ipo.composite_score >= 70 %}score-high{% elif ipo.composite_score >= 50 %}score-med{% else %}score-low{% endif %}" style="font-size: 1.25rem; padding: 0.35rem 0.85rem;">
+                    {{ ipo.composite_score|floatformat:1 }} / 100
+                </div>
+                <div>
+                    <span class="action-badge {% if 'Apply' in ipo.recommendation %}action-strong-buy{% elif 'Hold' in ipo.recommendation %}action-research{% else %}action-avoid{% endif %}">
+                        {{ ipo.recommendation }}
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Forensic Metrics Grid -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 0.75rem; margin-top: 1.5rem; border-top: 1px solid var(--border-color); padding-top: 1.25rem;">
+        <div>
+            <div class="kpi-label">Total Issue Size</div>
+            <div class="font-mono" style="font-weight: 700; color: #60a5fa; font-size: 1.1rem;">₹{{ ipo.issue_size_cr|floatformat:0 }} Cr</div>
+        </div>
+        <div>
+            <div class="kpi-label">Fresh Capital</div>
+            <div class="font-mono text-positive" style="font-weight: 700; font-size: 1.1rem;">₹{{ ipo.fresh_issue_cr|floatformat:0 }} Cr ({{ ipo.fresh_ratio_pct }}%)</div>
+        </div>
+        <div>
+            <div class="kpi-label">Offer for Sale</div>
+            <div class="font-mono text-negative" style="font-weight: 700; font-size: 1.1rem;">₹{{ ipo.ofs_cr|floatformat:0 }} Cr ({{ ipo.ofs_ratio_pct }}%)</div>
+        </div>
+        <div>
+            <div class="kpi-label">Grey Market Premium</div>
+            <div class="font-mono {% if ipo.gmp_percent >= 15 %}text-positive{% else %}text-secondary{% endif %}" style="font-weight: 700; font-size: 1.1rem;">
+                +₹{{ ipo.gmp|floatformat:0 }} (+{{ ipo.gmp_percent|floatformat:1 }}%)
+            </div>
+        </div>
+        <div>
+            <div class="kpi-label">Post-Issue P/E</div>
+            <div class="font-mono" style="font-weight: 700; color: #fff; font-size: 1.1rem;">{{ ipo.post_pe|floatformat:1 }}x</div>
+        </div>
+        <div>
+            <div class="kpi-label">Listed Peer P/E</div>
+            <div class="font-mono" style="font-weight: 700; color: var(--text-secondary); font-size: 1.1rem;">{{ ipo.industry_pe|floatformat:1 }}x</div>
+        </div>
+        <div>
+            <div class="kpi-label">Pre-IPO ROCE</div>
+            <div class="font-mono text-positive" style="font-weight: 700; font-size: 1.1rem;">{{ ipo.pre_roce|floatformat:1 }}%</div>
+        </div>
+        <div>
+            <div class="kpi-label">Pre-IPO ROE</div>
+            <div class="font-mono text-positive" style="font-weight: 700; font-size: 1.1rem;">{{ ipo.pre_roe|floatformat:1 }}%</div>
+        </div>
+    </div>
+</div>
+
+{% if ipo.is_closing_today %}
+<!-- Final Day Bidding Urgency Alert -->
+<div class="fin-card" style="border-left: 4px solid #ef4444; background: rgba(239, 68, 68, 0.08); padding: 1rem 1.25rem; margin-bottom: 1.5rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem;">
+    <div style="display: flex; align-items: center; gap: 0.75rem;">
+        <span style="font-size: 1.6rem;">🚨</span>
+        <div>
+            <div style="font-weight: 800; color: #fff; font-size: 0.95rem;">
+                FINAL DAY TO APPLY — ASBA / UPI BIDDING CUT-OFF CLOSES TODAY AT 5:00 PM IST
+            </div>
+            <div style="font-size: 0.82rem; color: var(--text-secondary); margin-top: 0.2rem;">
+                Exchange bidding windows on NSE and BSE close strictly at 17:00 IST. Ensure your bank ASBA or UPI mandate authorization (via BHIM/GPay/PhonePe) is confirmed before 5:00 PM.
+            </div>
+        </div>
+    </div>
+    <div style="font-family: var(--font-mono); font-size: 0.82rem; color: #f87171; font-weight: 700; background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.3); padding: 0.35rem 0.75rem; border-radius: 6px;">
+        Closing Date: {{ ipo.close_date|date:"d M Y" }} (Today)
+    </div>
+</div>
+{% endif %}
+
+<!-- Row 2: Issue Structure & Subscription Demand -->
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
+    <!-- Issue Structure Breakdown -->
+    <div class="fin-card" style="margin-bottom: 0;">
+        <div class="fin-card-header">
+            <div class="fin-card-title">
+                <span>⚖️</span>
+                <span>Capital Structure &amp; Objects of Issue</span>
+            </div>
+        </div>
+        <div style="margin-bottom: 1rem;">
+            <div style="display: flex; justify-content: space-between; font-size: 0.85rem; margin-bottom: 0.35rem;">
+                <span>Fresh Capital Retention: <strong style="color: #10b981;">₹{{ ipo.fresh_issue_cr|floatformat:0 }} Cr ({{ ipo.fresh_ratio_pct }}%)</strong></span>
+                <span>Promoter / PE Exit: <strong style="color: #f43f5e;">₹{{ ipo.ofs_cr|floatformat:0 }} Cr ({{ ipo.ofs_ratio_pct }}%)</strong></span>
+            </div>
+            <div style="height: 10px; border-radius: 5px; background: #f43f5e; overflow: hidden; display: flex;">
+                <div style="width: {{ ipo.fresh_ratio_pct }}%; background: #10b981;"></div>
+            </div>
+            <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.35rem;">
+                *Institutional Rule: Favor issues with Fresh Issue > 60%. Avoid issues where OFS exceeds 70% unless valuation provides deep margin of safety.
+            </div>
+        </div>
+
+        <div style="background: var(--bg-input); padding: 1rem; border-radius: 8px; border: 1px solid var(--border-color); margin-bottom: 1rem;">
+            <div style="font-size: 0.75rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 0.35rem;">Stated Objects of the Issue:</div>
+            <div style="font-size: 0.85rem; color: #fff; line-height: 1.5;">{{ ipo.objects_of_issue }}</div>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; font-size: 0.8rem; border-top: 1px solid var(--border-color); padding-top: 0.75rem;">
+            <span class="text-secondary">Promoter Stake:</span>
+            <span class="font-mono" style="color: #fff;">{{ ipo.promoter_holding_pre }}% (Pre) → {{ ipo.promoter_holding_post }}% (Post-IPO)</span>
+        </div>
+    </div>
+
+    <!-- Subscription & Demand Dynamics -->
+    <div class="fin-card" style="margin-bottom: 0;">
+        <div class="fin-card-header">
+            <div class="fin-card-title">
+                <span>📊</span>
+                <span>Exchange Bidding Demand &amp; Anchor Quality</span>
+            </div>
+            <span class="font-mono text-positive" style="font-weight: 700;">Total: {{ ipo.total_subscription|floatformat:1 }}x</span>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 1.25rem;">
+            <div>
+                <div style="display: flex; justify-content: space-between; font-size: 0.8rem; margin-bottom: 0.25rem;">
+                    <span class="text-secondary">Qualified Institutional Buyers (QIB):</span>
+                    <span class="font-mono text-positive" style="font-weight: 700;">{{ ipo.qib_subscription|floatformat:1 }}x</span>
+                </div>
+                <div style="height: 6px; border-radius: 3px; background: rgba(255,255,255,0.06); overflow: hidden;">
+                    <div style="width: {% widthratio ipo.qib_subscription 100 100 %}%; max-width: 100%; height: 100%; background: #3b82f6;"></div>
+                </div>
+            </div>
+
+            <div>
+                <div style="display: flex; justify-content: space-between; font-size: 0.8rem; margin-bottom: 0.25rem;">
+                    <span class="text-secondary">Non-Institutional / HNI (NII):</span>
+                    <span class="font-mono" style="font-weight: 700; color: #fff;">{{ ipo.nii_subscription|floatformat:1 }}x</span>
+                </div>
+                <div style="height: 6px; border-radius: 3px; background: rgba(255,255,255,0.06); overflow: hidden;">
+                    <div style="width: {% widthratio ipo.nii_subscription 100 100 %}%; max-width: 100%; height: 100%; background: #06b6d4;"></div>
+                </div>
+            </div>
+
+            <div>
+                <div style="display: flex; justify-content: space-between; font-size: 0.8rem; margin-bottom: 0.25rem;">
+                    <span class="text-secondary">Retail Individual Investors:</span>
+                    <span class="font-mono" style="font-weight: 700; color: #fff;">{{ ipo.retail_subscription|floatformat:1 }}x</span>
+                </div>
+                <div style="height: 6px; border-radius: 3px; background: rgba(255,255,255,0.06); overflow: hidden;">
+                    <div style="width: {% widthratio ipo.retail_subscription 100 100 %}%; max-width: 100%; height: 100%; background: #10b981;"></div>
+                </div>
+            </div>
+        </div>
+
+        <div style="background: var(--bg-input); padding: 0.85rem; border-radius: 6px; border: 1px solid var(--border-color); font-size: 0.78rem;">
+            <div style="font-weight: 700; color: #f59e0b; margin-bottom: 0.25rem;">Key Anchor Institutional Backers:</div>
+            <div style="color: var(--text-secondary); line-height: 1.4;">{{ ipo.anchor_investors }}</div>
+        </div>
+    </div>
+</div>
+
+<!-- 9 Legendary Investor Strategies Evaluation Section -->
+<div class="fin-card">
+    <div class="fin-card-header">
+        <div class="fin-card-title">
+            <span>🏛️</span>
+            <span>9 Legendary Investor Strategy Scores &amp; Apply / Avoid Ratings</span>
+        </div>
+        <span class="text-secondary font-mono" style="font-size: 0.8rem;">30+ Years Quantitative Framework</span>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.25rem;">
+        {% for key, s in strategies.items %}
+        <div style="background: var(--bg-input); padding: 1.25rem; border-radius: 10px; border: 1px solid var(--border-color); display: flex; flex-direction: column; justify-content: space-between;">
+            <div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                    <span style="font-size: 1.05rem; font-weight: 700; color: #fff;">{{ s.philosophy }}</span>
+                    <span class="action-badge {% if 'Apply' in s.label %}action-strong-buy{% elif 'Hold' in s.label %}action-research{% else %}action-avoid{% endif %}">
+                        {{ s.label }}
+                    </span>
+                </div>
+                <div style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.75rem;">{{ s.style }}</div>
+
+                <div style="display: flex; align-items: baseline; gap: 0.5rem; margin-bottom: 0.75rem;">
+                    <span class="font-mono text-positive" style="font-size: 1.5rem; font-weight: 800;">{{ s.score|floatformat:1 }}</span>
+                    <span style="font-size: 0.8rem; color: var(--text-muted);">/ 100</span>
+                </div>
+
+                <div style="margin-bottom: 0.85rem;">
+                    <div style="font-size: 0.75rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase;">Institutional Rationale:</div>
+                    <div style="font-size: 0.82rem; color: #f8fafc; margin-top: 0.2rem; line-height: 1.5;">{{ s.reason }}</div>
+                </div>
+            </div>
+
+            <div>
+                <div style="font-size: 0.72rem; font-weight: 700; color: #f43f5e; text-transform: uppercase; margin-bottom: 0.35rem;">Key Strategy Risks:</div>
+                <ul style="padding-left: 1rem; font-size: 0.75rem; color: var(--text-secondary); line-height: 1.5;">
+                    {% for rk in s.key_risks %}
+                    <li>{{ rk }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- 3 Explicit Thesis Invalidation Conditions & RHP Forensics -->
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-top: 1.5rem;">
+    <!-- Thesis Invalidation Conditions -->
+    <div class="fin-card">
+        <div class="fin-card-header">
+            <div class="fin-card-title text-negative">
+                <span>🛑</span>
+                <span>At Least 3 Thesis Invalidation Conditions</span>
+            </div>
+        </div>
+        <div style="font-size: 0.82rem; color: var(--text-secondary); margin-bottom: 0.85rem;">
+            If any of the following boundary triggers occur post-listing, the investment thesis is formally negated:
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+            {% for cond in thesis_invalidations %}
+            <div style="padding: 0.85rem 1rem; background: rgba(244, 63, 94, 0.08); border: 1px solid rgba(244, 63, 94, 0.25); border-radius: 6px; color: #fecdd3; font-size: 0.82rem; line-height: 1.5;">
+                {{ cond }}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Restated Accounting & Underwriter Details -->
+    <div class="fin-card">
+        <div class="fin-card-header">
+            <div class="fin-card-title">
+                <span>🔍</span>
+                <span>Restated Financials &amp; Underwriting Syndicate</span>
+            </div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 0.85rem; font-size: 0.85rem;">
+            <div style="display: flex; justify-content: space-between;">
+                <span class="text-secondary">3-Year Compounded Revenue CAGR:</span>
+                <span class="font-mono text-positive" style="font-weight: 700;">+{{ ipo.revenue_3y_cagr|floatformat:1 }}%</span>
+            </div>
+            <div style="display: flex; justify-content: space-between;">
+                <span class="text-secondary">3-Year Compounded PAT CAGR:</span>
+                <span class="font-mono text-positive" style="font-weight: 700;">+{{ ipo.pat_3y_cagr|floatformat:1 }}%</span>
+            </div>
+            <div style="display: flex; justify-content: space-between;">
+                <span class="text-secondary">Pre-IPO Operating Margin:</span>
+                <span class="font-mono" style="font-weight: 700; color: #fff;">{{ ipo.operating_margin|floatformat:1 }}%</span>
+            </div>
+            <div style="display: flex; justify-content: space-between;">
+                <span class="text-secondary">Debt-to-Equity Multiple:</span>
+                <span class="font-mono" style="font-weight: 700; color: #fff;">{{ ipo.debt_to_equity|floatformat:2 }}x</span>
+            </div>
+            <div style="display: flex; justify-content: space-between;">
+                <span class="text-secondary">Price to Book (P/B at upper band):</span>
+                <span class="font-mono" style="font-weight: 700; color: #fff;">{{ ipo.post_pb|floatformat:1 }}x</span>
+            </div>
+
+            <div style="border-top: 1px solid var(--border-color); padding-top: 0.75rem; margin-top: 0.25rem;">
+                <div style="font-size: 0.75rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 0.25rem;">Book Running Lead Managers (BRLMs):</div>
+                <div style="font-size: 0.8rem; color: #fff; line-height: 1.4;">{{ ipo.lead_managers }}</div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,51 @@
+# ==============================================================================
+# AI Stock Market Research & Ranking Agent (NSE / BSE) - Requirements
+# Python >= 3.10, 3.11, 3.12 compatible across Windows, macOS, and Linux
+# ==============================================================================
+
+# Web Framework & API
+django>=5.0.0
+djangorestframework>=3.14.0
+
+# Financial Data & Quantitative Analytics
+yfinance>=0.2.36
+pandas>=2.1.0
+numpy>=1.26.0
+scipy>=1.11.0
+ta>=0.11.0
+
+# Portfolio Statement Document Processing (Excel, Word, PDF, Export)
+openpyxl>=3.1.2
+python-docx>=1.1.0
+pypdf>=4.0.0
+fpdf2>=2.7.8
+pillow>=10.2.0
+
+# AI, Vector DB & LLM Engine
+openai>=1.12.0
+chromadb>=0.4.22
+pydantic>=2.5.0
+pydantic-settings>=2.1.0
+sqlalchemy>=2.0.0
+
+# Market Feeds, RSS & Web Scraping
+requests>=2.31.0
+beautifulsoup4>=4.12.0
+feedparser>=6.0.10
+lxml>=5.0.0
+
+# Interactive Dashboard & CLI
+streamlit>=1.31.0
+plotly>=5.18.0
+rich>=13.7.0
+typer>=0.9.0
+
+# Core Utilities & Scheduler
+python-dotenv>=1.0.0
+pyyaml>=6.0.1
+apscheduler>=3.10.4
+pytz>=2024.1
+
+# Automated Testing
+pytest>=8.0.0
+pytest-cov>=4.1.0

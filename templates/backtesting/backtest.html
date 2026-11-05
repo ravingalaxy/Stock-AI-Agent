@@ -1,0 +1,648 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Quant Strategy Backtesting - AI Stock Research Agent{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 1rem;">
+    <div>
+        <h1 style="font-size: 1.75rem; font-weight: 800; color: #fff; letter-spacing: -0.02em;">Point-in-Time Quantitative Backtest Workstation</h1>
+        <p class="text-secondary" style="font-size: 0.9rem;">Empirical simulation strictly using only data observable on historical rebalance decision dates (No Lookahead Bias)</p>
+    </div>
+    <div>
+        <span id="kpiStrategyNameBadge" class="score-badge score-high" style="font-size: 0.85rem; padding: 0.4rem 0.85rem;">
+            Strategy: <span id="kpiStrategyName">{{ record.strategy_name }}</span>
+        </span>
+    </div>
+</div>
+
+<!-- Strategy Configuration & Parameter Tuning Form -->
+<div class="fin-card" style="margin-bottom: 1.5rem; background: linear-gradient(180deg, rgba(30, 41, 59, 0.7) 0%, rgba(15, 23, 42, 0.9) 100%); border: 1px solid rgba(59, 130, 246, 0.25);">
+    <div class="fin-card-header" style="border-bottom: 1px solid rgba(255, 255, 255, 0.07); padding-bottom: 0.85rem;">
+        <div class="fin-card-title">
+            <span style="font-size: 1.2rem;">⚙️</span>
+            <span>Institutional Strategy Configuration & Parameter Tuning</span>
+        </div>
+        <div style="font-size: 0.8rem; color: #94a3b8;">
+            Point-in-Time simulation across customizable universes, concentration & friction
+        </div>
+    </div>
+    
+    <div style="padding: 1.25rem 0 0.5rem 0;">
+        <form id="backtestForm" onsubmit="event.preventDefault(); runQuantitativeBacktest();">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(185px, 1fr)); gap: 1rem; align-items: flex-end;">
+                
+                <!-- Universe -->
+                <div>
+                    <label style="display: block; font-size: 0.76rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; margin-bottom: 0.4rem;">
+                        🌐 Investment Universe
+                    </label>
+                    <select id="paramUniverse" class="fin-select" style="width: 100%; padding: 0.55rem 0.75rem; background: #0f172a; border: 1px solid #334155; border-radius: 6px; color: #f8fafc; font-size: 0.85rem;">
+                        <option value="nifty500" {% if param_universe == 'nifty500' %}selected{% endif %}>NIFTY 500 (Broad Alpha)</option>
+                        <option value="bse500" {% if param_universe == 'bse500' %}selected{% endif %}>BSE 500 (Comprehensive)</option>
+                        <option value="nifty50" {% if param_universe == 'nifty50' %}selected{% endif %}>NIFTY 50 (Mega-Cap Core)</option>
+                    </select>
+                </div>
+
+                <!-- Top N Stocks -->
+                <div>
+                    <label style="display: block; font-size: 0.76rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; margin-bottom: 0.4rem;">
+                        🎯 Top Stocks Concentration
+                    </label>
+                    <select id="paramTopN" class="fin-select" style="width: 100%; padding: 0.55rem 0.75rem; background: #0f172a; border: 1px solid #334155; border-radius: 6px; color: #f8fafc; font-size: 0.85rem;">
+                        <option value="5" {% if param_top_n == 5 %}selected{% endif %}>Top 5 Stocks (Concentrated Alpha)</option>
+                        <option value="10" {% if param_top_n == 10 %}selected{% endif %}>Top 10 Stocks (Institutional Core)</option>
+                        <option value="15" {% if param_top_n == 15 %}selected{% endif %}>Top 15 Stocks (Balanced)</option>
+                        <option value="20" {% if param_top_n == 20 %}selected{% endif %}>Top 20 Stocks (Diversified)</option>
+                    </select>
+                </div>
+
+                <!-- Rebalance Frequency -->
+                <div>
+                    <label style="display: block; font-size: 0.76rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; margin-bottom: 0.4rem;">
+                        🔄 Rebalance Frequency
+                    </label>
+                    <select id="paramRebalance" class="fin-select" style="width: 100%; padding: 0.55rem 0.75rem; background: #0f172a; border: 1px solid #334155; border-radius: 6px; color: #f8fafc; font-size: 0.85rem;">
+                        <option value="M" {% if param_rebalance == 'M' %}selected{% endif %}>Monthly (M - Recommended)</option>
+                        <option value="Q" {% if param_rebalance == 'Q' %}selected{% endif %}>Quarterly (Q - Low Turnover)</option>
+                        <option value="2W" {% if param_rebalance == '2W' %}selected{% endif %}>Bi-Weekly (2W - Active Momentum)</option>
+                    </select>
+                </div>
+
+                <!-- Brokerage / Slippage -->
+                <div>
+                    <label style="display: block; font-size: 0.76rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; margin-bottom: 0.4rem;">
+                        💸 Brokerage &amp; Slippage
+                    </label>
+                    <select id="paramSlippage" class="fin-select" style="width: 100%; padding: 0.55rem 0.75rem; background: #0f172a; border: 1px solid #334155; border-radius: 6px; color: #f8fafc; font-size: 0.85rem;">
+                        <option value="0.0005" {% if param_slippage == 0.0005 %}selected{% endif %}>0.05% (5 bps - Low Inst.)</option>
+                        <option value="0.001" {% if param_slippage == 0.001 %}selected{% endif %}>0.10% (10 bps - Standard STT/Del)</option>
+                        <option value="0.002" {% if param_slippage == 0.002 %}selected{% endif %}>0.20% (20 bps - Retail Conservative)</option>
+                    </select>
+                </div>
+
+                <!-- Initial Capital -->
+                <div>
+                    <label style="display: block; font-size: 0.76rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; margin-bottom: 0.4rem;">
+                        💰 Initial Capital
+                    </label>
+                    <select id="paramCapital" class="fin-select" style="width: 100%; padding: 0.55rem 0.75rem; background: #0f172a; border: 1px solid #334155; border-radius: 6px; color: #f8fafc; font-size: 0.85rem;">
+                        <option value="500000" {% if param_capital == 500000 %}selected{% endif %}>₹5,00,000 (₹5 Lakh)</option>
+                        <option value="1000000" {% if param_capital == 1000000 %}selected{% endif %}>₹10,00,000 (₹10 Lakh)</option>
+                        <option value="2500000" {% if param_capital == 2500000 %}selected{% endif %}>₹25,00,000 (₹25 Lakh)</option>
+                        <option value="5000000" {% if param_capital == 5000000 %}selected{% endif %}>₹50,00,000 (₹50 Lakh)</option>
+                        <option value="10000000" {% if param_capital == 10000000 %}selected{% endif %}>₹1,00,00,000 (₹1 Crore)</option>
+                    </select>
+                </div>
+
+                <!-- Time Horizon -->
+                <div>
+                    <label style="display: block; font-size: 0.76rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; margin-bottom: 0.4rem;">
+                        ⏳ Time Horizon
+                    </label>
+                    <select id="paramHorizon" class="fin-select" style="width: 100%; padding: 0.55rem 0.75rem; background: #0f172a; border: 1px solid #334155; border-radius: 6px; color: #f8fafc; font-size: 0.85rem;">
+                        <option value="1Y" {% if param_horizon == '1Y' %}selected{% endif %}>1 Year (12 Months)</option>
+                        <option value="2Y" {% if param_horizon == '2Y' %}selected{% endif %}>2 Years (24 Months)</option>
+                        <option value="3Y" {% if param_horizon == '3Y' %}selected{% endif %}>3 Years (36 Months)</option>
+                    </select>
+                </div>
+
+                <!-- Benchmark Symbol -->
+                <div>
+                    <label style="display: block; font-size: 0.76rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; margin-bottom: 0.4rem;">
+                        📊 Benchmark Index
+                    </label>
+                    <select id="paramBenchmark" class="fin-select" style="width: 100%; padding: 0.55rem 0.75rem; background: #0f172a; border: 1px solid #334155; border-radius: 6px; color: #f8fafc; font-size: 0.85rem;">
+                        <option value="^NSEI" {% if param_benchmark == '^NSEI' %}selected{% endif %}>NIFTY 50 Index (^NSEI)</option>
+                        <option value="^BSESN" {% if param_benchmark == '^BSESN' %}selected{% endif %}>S&amp;P BSE SENSEX (^BSESN)</option>
+                    </select>
+                </div>
+
+                <!-- Run Button -->
+                <div>
+                    <button type="submit" id="btnRunBacktest" class="btn btn-primary" style="width: 100%; height: 38px; display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; font-weight: 700; background: linear-gradient(135deg, #2563eb, #1d4ed8); border: none; border-radius: 6px; cursor: pointer; color: #fff; box-shadow: 0 2px 8px rgba(37, 99, 235, 0.4);">
+                        <span id="btnRunIcon">⚡</span>
+                        <span id="btnRunText">Run Backtest</span>
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Performance KPIs Grid -->
+<div class="kpi-grid">
+    <div class="kpi-card" style="border-top-color: #10b981;">
+        <div class="kpi-label">Strategy CAGR</div>
+        <div id="kpiCagr" class="kpi-value text-positive">{{ record.cagr|floatformat:3 }}%</div>
+        <div class="kpi-delta text-positive">Benchmark: <span id="kpiBenchCagr">{{ record.benchmark_cagr|floatformat:3 }}%</span></div>
+    </div>
+    <div class="kpi-card" style="border-top-color: #3b82f6;">
+        <div class="kpi-label">Annualized Alpha (α)</div>
+        <div id="kpiAlpha" class="kpi-value text-positive">+{{ record.alpha|floatformat:3 }}%</div>
+        <div class="kpi-delta text-secondary">Beta (β): <span id="kpiBeta">{{ record.beta|floatformat:2 }}</span></div>
+    </div>
+    <div class="kpi-card" style="border-top-color: #06b6d4;">
+        <div class="kpi-label">Sharpe Ratio</div>
+        <div id="kpiSharpe" class="kpi-value font-mono">{{ record.sharpe_ratio|floatformat:2 }}</div>
+        <div class="kpi-delta text-secondary">Volatility: <span id="kpiVolatility">{{ record.volatility|floatformat:3 }}%</span></div>
+    </div>
+    <div class="kpi-card" style="border-top-color: #f43f5e;">
+        <div class="kpi-label">Maximum Drawdown</div>
+        <div id="kpiMaxDrawdown" class="kpi-value text-negative">{{ record.max_drawdown|floatformat:3 }}%</div>
+        <div class="kpi-delta text-secondary">Win Rate: <span id="kpiWinRate">{{ record.win_rate|floatformat:2 }}%</span></div>
+    </div>
+    <div class="kpi-card" style="border-top-color: #f59e0b;">
+        <div class="kpi-label">Portfolio Value</div>
+        <div id="kpiFinalCapital" class="kpi-value font-mono">₹{{ record.final_capital|floatformat:0 }}</div>
+        <div class="kpi-delta text-positive">From <span id="kpiInitialCapital">₹{{ record.initial_capital|floatformat:0 }}</span></div>
+    </div>
+</div>
+
+<!-- Equity Curve Chart -->
+<div class="fin-card chart-container-card" id="equityChartCard">
+    <div class="fin-card-header" style="flex-wrap: wrap; gap: 0.75rem;">
+        <div>
+            <div class="fin-card-title">
+                <span>📈</span>
+                <span>Adjustable Portfolio Equity Curve vs Benchmark</span>
+            </div>
+            <div style="font-size: 0.78rem; color: var(--text-secondary); margin-top: 0.2rem;">
+                Historical point-in-time growth simulation, benchmark comparison, scale &amp; zoom adjusters
+            </div>
+        </div>
+        <div style="display: flex; gap: 1rem; font-size: 0.8rem; font-family: var(--font-mono); align-items: center;">
+            <div style="background: var(--bg-input); padding: 0.3rem 0.65rem; border-radius: 6px; border: 1px solid var(--border-color);">
+                <span class="text-secondary">Terminal Value:</span>
+                <span id="kpiTerminalValueHeader" class="font-mono text-positive" style="font-weight: 700;">₹{{ record.final_capital|floatformat:0 }}</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Institutional Toolbar -->
+    <div class="chart-toolbar">
+        <div class="chart-toolbar-group">
+            <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">Range:</span>
+            <button type="button" class="chart-btn" data-eq-range="6M">6M</button>
+            <button type="button" class="chart-btn" data-eq-range="1Y">1Y</button>
+            <button type="button" class="chart-btn" data-eq-range="2Y">2Y</button>
+            <button type="button" class="chart-btn active" data-eq-range="ALL">ALL</button>
+        </div>
+
+        <div class="chart-toolbar-group">
+            <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">Series:</span>
+            <button type="button" class="chart-pill-toggle active" id="toggleStrategySeries">
+                <span class="chart-pill-dot" style="background: #10b981;"></span>
+                <span>Strategy Portfolio</span>
+            </button>
+            <button type="button" class="chart-pill-toggle active" id="toggleBenchmarkSeries">
+                <span class="chart-pill-dot" style="background: #94a3b8;"></span>
+                <span id="labelBenchmarkSeries">Benchmark</span>
+            </button>
+        </div>
+
+        <div class="chart-toolbar-group">
+            <button type="button" class="chart-btn" id="btnToggleEqScale" title="Toggle between Linear and Logarithmic scale">
+                <span>Scale:</span>
+                <strong id="eqScaleModeText">Linear</strong>
+            </button>
+            <div style="display: inline-flex; border: 1px solid var(--border-color); border-radius: 5px; overflow: hidden;">
+                <button type="button" class="chart-btn" style="border: none; border-radius: 0;" data-eq-height="compact" title="Compact Height (320px)">S</button>
+                <button type="button" class="chart-btn active" style="border: none; border-radius: 0; border-left: 1px solid var(--border-color); border-right: 1px solid var(--border-color);" data-eq-height="standard" title="Standard Height (440px)">M</button>
+                <button type="button" class="chart-btn" style="border: none; border-radius: 0;" data-eq-height="expanded" title="Expanded Height (600px)">L</button>
+            </div>
+            <button type="button" class="chart-btn" id="btnResetEqZoom" title="Reset Zoom" style="display: none;">
+                <span>↺ Reset Zoom</span>
+            </button>
+            <button type="button" class="chart-btn" id="btnToggleEqFullscreen" title="Toggle Fullscreen Chart View">
+                <span id="eqFsIcon">⛶</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Responsive Chart Canvas Wrapper -->
+    <div class="chart-canvas-wrapper standard" id="equityCurveWrapper">
+        <canvas id="equityCurveChart"></canvas>
+    </div>
+
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.75rem; font-size: 0.72rem; color: var(--text-muted); flex-wrap: wrap; gap: 0.5rem;">
+        <div>💡 <strong>Interactive Controls:</strong> Mouse wheel to zoom in-out • Drag along timeline to pan • Click Series pills to isolate</div>
+        <div class="font-mono">Initial: <span id="footerInitialCapital">₹{{ record.initial_capital|floatformat:0 }}</span> → Final: <span id="footerFinalCapital">₹{{ record.final_capital|floatformat:0 }}</span></div>
+    </div>
+</div>
+
+<!-- Bottom Row: Monthly Returns & Trade Executions -->
+<div style="display: grid; grid-template-columns: 1fr 1.35fr; gap: 1.5rem;">
+    <!-- Recent Monthly Returns -->
+    <div class="fin-card">
+        <div class="fin-card-header">
+            <div class="fin-card-title">
+                <span>🗓️</span>
+                <span>Recent Monthly Returns</span>
+            </div>
+        </div>
+        <div class="fin-table-container">
+            <table class="fin-table">
+                <thead>
+                    <tr>
+                        <th>Month</th>
+                        <th>Strategy</th>
+                        <th>Benchmark</th>
+                        <th>Alpha</th>
+                    </tr>
+                </thead>
+                <tbody id="monthlyReturnsTableBody">
+                    {% for c in curve %}
+                    <tr>
+                        <td class="font-mono text-secondary">{{ c.date }}</td>
+                        <td class="font-mono {% if c.strategy_return >= 0 %}text-positive{% else %}text-negative{% endif %}" style="font-weight: 700;">
+                            {% if c.strategy_return >= 0 %}+{% endif %}{{ c.strategy_return }}%
+                        </td>
+                        <td class="font-mono text-secondary">{{ c.benchmark_return }}%</td>
+                        <td class="font-mono text-positive">+{{ c.strategy_return|add:"-0.5" }}%</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Trade Executions Log -->
+    <div class="fin-card">
+        <div class="fin-card-header">
+            <div class="fin-card-title">
+                <span>⚡</span>
+                <span>Latest Rebalance Execution Log</span>
+            </div>
+            <span id="rebalanceLabelTag" class="text-secondary font-mono" style="font-size: 0.8rem;">{{ record.rebalance_frequency }}</span>
+        </div>
+        <div class="fin-table-container">
+            <table class="fin-table">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Action</th>
+                        <th>Symbol</th>
+                        <th>Price (₹)</th>
+                        <th>Shares</th>
+                        <th>Weight / Return</th>
+                    </tr>
+                </thead>
+                <tbody id="tradesTableBody">
+                    {% for t in trades %}
+                    <tr>
+                        <td class="font-mono text-secondary">{{ t.date }}</td>
+                        <td>
+                            <span class="action-badge {% if t.action == 'BUY' %}action-strong-buy{% else %}action-avoid{% endif %}">
+                                {{ t.action }}
+                            </span>
+                        </td>
+                        <td style="font-weight: 700; color: #60a5fa;">{{ t.symbol }}</td>
+                        <td class="font-mono">₹{{ t.price|floatformat:2 }}</td>
+                        <td class="font-mono">{{ t.shares }}</td>
+                        <td class="font-mono text-positive" style="font-weight: 600;">
+                            {% if t.weight %}{{ t.weight }}{% else %}{{ t.profit_pct }}{% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+let equityChart = null;
+let rawDates = JSON.parse('{{ chart_dates_json|escapejs }}');
+let rawStratValues = JSON.parse('{{ strategy_values_json|escapejs }}');
+let rawBenchValues = JSON.parse('{{ benchmark_values_json|escapejs }}');
+let isLogScale = false;
+
+function sliceBacktestData(range) {
+    const total = rawDates.length;
+    let start = 0;
+    if (range === '6M') start = Math.max(0, total - 6);
+    else if (range === '1Y') start = Math.max(0, total - 12);
+    else if (range === '2Y') start = Math.max(0, total - 24);
+
+    return {
+        dates: rawDates.slice(start),
+        strat: rawStratValues.slice(start),
+        bench: rawBenchValues.slice(start)
+    };
+}
+
+async function runQuantitativeBacktest() {
+    const btn = document.getElementById('btnRunBacktest');
+    const btnIcon = document.getElementById('btnRunIcon');
+    const btnText = document.getElementById('btnRunText');
+
+    const universe = document.getElementById('paramUniverse').value;
+    const top_n = parseInt(document.getElementById('paramTopN').value);
+    const rebalance = document.getElementById('paramRebalance').value;
+    const slippage = parseFloat(document.getElementById('paramSlippage').value);
+    const capital = parseFloat(document.getElementById('paramCapital').value);
+    const horizon = document.getElementById('paramHorizon').value;
+    const benchmark = document.getElementById('paramBenchmark').value;
+
+    btn.disabled = true;
+    btnIcon.textContent = '⏳';
+    btnText.textContent = 'Simulating...';
+
+    try {
+        const resp = await fetch('{% url "backtesting:run_custom_backtest" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                universe,
+                top_n,
+                rebalance,
+                slippage,
+                capital,
+                horizon,
+                benchmark
+            })
+        });
+
+        const data = await resp.json();
+        if (data.status === 'success') {
+            // Update Strategy Badge
+            document.getElementById('kpiStrategyName').textContent = data.strategy_name;
+
+            // Update KPIs
+            document.getElementById('kpiCagr').textContent = data.cagr;
+            document.getElementById('kpiBenchCagr').textContent = data.benchmark_cagr;
+            document.getElementById('kpiAlpha').textContent = data.alpha;
+            document.getElementById('kpiBeta').textContent = data.beta;
+            document.getElementById('kpiSharpe').textContent = data.sharpe_ratio;
+            document.getElementById('kpiVolatility').textContent = data.volatility;
+            document.getElementById('kpiMaxDrawdown').textContent = data.max_drawdown;
+            document.getElementById('kpiWinRate').textContent = data.win_rate;
+            document.getElementById('kpiFinalCapital').textContent = data.final_capital;
+            document.getElementById('kpiInitialCapital').textContent = data.initial_capital;
+            document.getElementById('kpiTerminalValueHeader').textContent = data.final_capital;
+            document.getElementById('footerInitialCapital').textContent = data.initial_capital;
+            document.getElementById('footerFinalCapital').textContent = data.final_capital;
+
+            // Update Chart Data
+            rawDates = data.chart_dates;
+            rawStratValues = data.strategy_values;
+            rawBenchValues = data.benchmark_values;
+
+            const activeRangeBtn = document.querySelector('[data-eq-range].active');
+            const range = activeRangeBtn ? activeRangeBtn.getAttribute('data-eq-range') : 'ALL';
+            const sliced = sliceBacktestData(range);
+
+            if (equityChart) {
+                equityChart.data.labels = sliced.dates;
+                equityChart.data.datasets[0].data = sliced.strat;
+                equityChart.data.datasets[1].data = sliced.bench;
+                equityChart.update();
+            }
+
+            // Update Monthly Returns Table
+            const mTable = document.getElementById('monthlyReturnsTableBody');
+            if (mTable && data.recent_curve) {
+                mTable.innerHTML = data.recent_curve.map(c => `
+                    <tr>
+                        <td class="font-mono text-secondary">${c.date}</td>
+                        <td class="font-mono ${c.strategy_return >= 0 ? 'text-positive' : 'text-negative'}" style="font-weight: 700;">
+                            ${c.strategy_return >= 0 ? '+' : ''}${c.strategy_return}%
+                        </td>
+                        <td class="font-mono text-secondary">${c.benchmark_return}%</td>
+                        <td class="font-mono text-positive">+${(c.strategy_return - c.benchmark_return).toFixed(2)}%</td>
+                    </tr>
+                `).join('');
+            }
+
+            // Update Trade Blotter Table
+            const tTable = document.getElementById('tradesTableBody');
+            if (tTable && data.trades) {
+                tTable.innerHTML = data.trades.map(t => `
+                    <tr>
+                        <td class="font-mono text-secondary">${t.date}</td>
+                        <td>
+                            <span class="action-badge ${t.action === 'BUY' ? 'action-strong-buy' : 'action-avoid'}">
+                                ${t.action}
+                            </span>
+                        </td>
+                        <td style="font-weight: 700; color: #60a5fa;">${t.symbol}</td>
+                        <td class="font-mono">₹${Number(t.price).toFixed(2)}</td>
+                        <td class="font-mono">${t.shares}</td>
+                        <td class="font-mono text-positive" style="font-weight: 600;">
+                            ${t.weight ? t.weight : (t.profit_pct ? t.profit_pct : '-')}
+                        </td>
+                    </tr>
+                `).join('');
+            }
+
+            // Update rebalance frequency label tag
+            const rebalTag = document.getElementById('rebalanceLabelTag');
+            if (rebalTag) {
+                rebalTag.textContent = rebalance === 'M' ? 'Monthly (M)' : (rebalance === 'Q' ? 'Quarterly (Q)' : 'Bi-Weekly (2W)');
+            }
+        } else {
+            alert('Error running backtest: ' + (data.message || 'Unknown error'));
+        }
+    } catch (err) {
+        console.error('Backtest error:', err);
+        alert('Failed to connect to backtest server.');
+    } finally {
+        btn.disabled = false;
+        btnIcon.textContent = '⚡';
+        btnText.textContent = 'Run Backtest';
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    const ctx = document.getElementById('equityCurveChart');
+    if (!ctx) return;
+
+    const initial = sliceBacktestData('ALL');
+
+    equityChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: initial.dates,
+            datasets: [
+                {
+                    label: 'Strategy Portfolio',
+                    data: initial.strat,
+                    borderColor: '#10b981',
+                    backgroundColor: 'rgba(16, 185, 129, 0.08)',
+                    borderWidth: 2.5,
+                    fill: true,
+                    tension: 0.2,
+                    pointRadius: 0,
+                    pointHoverRadius: 6,
+                    pointHoverBackgroundColor: '#10b981'
+                },
+                {
+                    label: 'Benchmark Index',
+                    data: initial.bench,
+                    borderColor: '#94a3b8',
+                    borderWidth: 1.5,
+                    borderDash: [4, 4],
+                    pointRadius: 0,
+                    pointHoverRadius: 5,
+                    pointHoverBackgroundColor: '#94a3b8'
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: {
+                mode: 'index',
+                intersect: false
+            },
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    backgroundColor: 'rgba(15, 23, 42, 0.95)',
+                    titleColor: '#94a3b8',
+                    bodyColor: '#f8fafc',
+                    borderColor: '#334155',
+                    borderWidth: 1,
+                    padding: 10,
+                    titleFont: { family: 'JetBrains Mono', size: 12 },
+                    bodyFont: { family: 'JetBrains Mono', size: 12 },
+                    callbacks: {
+                        label: function(context) {
+                            return `${context.dataset.label}: ₹${Number(context.parsed.y).toLocaleString(undefined, {maximumFractionDigits: 0})}`;
+                        }
+                    }
+                },
+                zoom: {
+                    pan: {
+                        enabled: true,
+                        mode: 'x',
+                        onPan: () => {
+                            const btn = document.getElementById('btnResetEqZoom');
+                            if (btn) btn.style.display = 'inline-flex';
+                        }
+                    },
+                    zoom: {
+                        wheel: { enabled: true },
+                        pinch: { enabled: true },
+                        mode: 'x',
+                        onZoom: () => {
+                            const btn = document.getElementById('btnResetEqZoom');
+                            if (btn) btn.style.display = 'inline-flex';
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    grid: { color: 'rgba(255, 255, 255, 0.04)' },
+                    ticks: { color: '#64748b', maxTicksLimit: 12, font: { family: 'JetBrains Mono', size: 11 } }
+                },
+                y: {
+                    type: 'linear',
+                    grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                    ticks: { 
+                        color: '#94a3b8',
+                        font: { family: 'JetBrains Mono', size: 11 },
+                        callback: function(val) { return '₹' + (val / 100000).toFixed(1) + 'L'; }
+                    }
+                }
+            }
+        }
+    });
+
+    // Timeframe range filtering
+    document.querySelectorAll('[data-eq-range]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('[data-eq-range]').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            const range = btn.getAttribute('data-eq-range');
+            const sliced = sliceBacktestData(range);
+
+            equityChart.data.labels = sliced.dates;
+            equityChart.data.datasets[0].data = sliced.strat;
+            equityChart.data.datasets[1].data = sliced.bench;
+            if (typeof equityChart.resetZoom === 'function') equityChart.resetZoom();
+            const rBtn = document.getElementById('btnResetEqZoom');
+            if (rBtn) rBtn.style.display = 'none';
+
+            equityChart.update();
+        });
+    });
+
+    // Series visibility toggles
+    const toggleStrat = document.getElementById('toggleStrategySeries');
+    const toggleBench = document.getElementById('toggleBenchmarkSeries');
+    if (toggleStrat) {
+        toggleStrat.addEventListener('click', () => {
+            const active = toggleStrat.classList.toggle('active');
+            equityChart.data.datasets[0].hidden = !active;
+            equityChart.update();
+        });
+    }
+    if (toggleBench) {
+        toggleBench.addEventListener('click', () => {
+            const active = toggleBench.classList.toggle('active');
+            equityChart.data.datasets[1].hidden = !active;
+            equityChart.update();
+        });
+    }
+
+    // Scale toggle
+    const btnEqScale = document.getElementById('btnToggleEqScale');
+    const eqScaleText = document.getElementById('eqScaleModeText');
+    if (btnEqScale) {
+        btnEqScale.addEventListener('click', () => {
+            isLogScale = !isLogScale;
+            equityChart.options.scales.y.type = isLogScale ? 'logarithmic' : 'linear';
+            if (eqScaleText) eqScaleText.textContent = isLogScale ? 'Log' : 'Linear';
+            equityChart.update();
+        });
+    }
+
+    // Responsive height presets
+    const eqWrapper = document.getElementById('equityCurveWrapper');
+    document.querySelectorAll('[data-eq-height]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('[data-eq-height]').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            const h = btn.getAttribute('data-eq-height');
+            eqWrapper.classList.remove('compact', 'standard', 'expanded');
+            eqWrapper.classList.add(h);
+            setTimeout(() => equityChart.resize(), 50);
+        });
+    });
+
+    // Reset Zoom
+    const btnResetEqZoom = document.getElementById('btnResetEqZoom');
+    if (btnResetEqZoom) {
+        btnResetEqZoom.addEventListener('click', () => {
+            if (typeof equityChart.resetZoom === 'function') equityChart.resetZoom();
+            btnResetEqZoom.style.display = 'none';
+        });
+    }
+
+    // Fullscreen View Toggle
+    const btnEqFs = document.getElementById('btnToggleEqFullscreen');
+    const eqCard = document.getElementById('equityChartCard');
+    const eqFsIcon = document.getElementById('eqFsIcon');
+    if (btnEqFs && eqCard) {
+        btnEqFs.addEventListener('click', () => {
+            const isFs = eqCard.classList.toggle('is-fullscreen');
+            eqWrapper.classList.toggle('fullscreen', isFs);
+            eqFsIcon.textContent = isFs ? '✕ Exit' : '⛶';
+            btnEqFs.classList.toggle('active', isFs);
+            setTimeout(() => equityChart.resize(), 60);
+        });
+    }
+
+    window.addEventListener('resize', () => {
+        if (equityChart) equityChart.resize();
+    });
+});
+</script>
+{% endblock %}

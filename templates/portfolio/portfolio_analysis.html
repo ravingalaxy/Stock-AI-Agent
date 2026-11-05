@@ -1,0 +1,1086 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Portfolio Analysis & Expert-Style Evaluation - AI Stock Research Agent{% endblock %}
+
+{% block content %}
+<!-- Header Row -->
+<div style="margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 1rem;">
+    <div>
+        <div style="display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.25rem;">
+            <span style="font-size: 1.6rem;">📊</span>
+            <h1 style="font-size: 1.85rem; font-weight: 800; color: #fff; letter-spacing: -0.02em;">
+                Portfolio Analysis &amp; Expert-Style Evaluation
+            </h1>
+        </div>
+        <p class="text-secondary" style="font-size: 0.9rem;">
+            Universal statement ingestion (CSV, XLSX, XLS, PDF, DOCX), 9 Legendary Investor scoring, concentration heuristics, and institutional review.
+        </p>
+    </div>
+
+    <!-- Export & Statement Selector -->
+    <div style="display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;">
+        <!-- Top 10 Portfolios Navigation -->
+        <a href="{% url 'portfolio:top_portfolios' %}" class="btn-secondary" style="padding: 0.45rem 0.85rem; font-size: 0.82rem; text-decoration: none; display: inline-flex; align-items: center; gap: 0.4rem; border-color: rgba(245, 158, 11, 0.4); color: #fbbf24;" title="Explore the Top 10 Superinvestor & Model Portfolios with stock rationales">
+            <span>🏆</span> Top 10 Portfolios
+        </a>
+
+        <!-- Reset Controls -->
+        <a href="{% url 'portfolio:reset' %}?mode=default" class="btn-secondary" style="padding: 0.45rem 0.85rem; font-size: 0.82rem; text-decoration: none; display: inline-flex; align-items: center; gap: 0.4rem;" title="Reset to standard FYERS sample portfolio">
+            <span>🔄</span> Reset to Sample
+        </a>
+        <a href="{% url 'portfolio:reset' %}?mode=clear" class="btn-secondary" style="padding: 0.45rem 0.85rem; font-size: 0.82rem; text-decoration: none; display: inline-flex; align-items: center; gap: 0.4rem; border-color: rgba(239, 68, 68, 0.4); color: #f87171;" onclick="return confirm('Are you sure you want to clear all uploaded statements and reset portfolio analysis?');" title="Clear all statement data">
+            <span>🗑️</span> Reset / Clear
+        </a>
+
+        {% if statement %}
+        <div class="dropdown" style="display: inline-block;">
+            <a href="{% url 'portfolio:export_report' 'pdf' %}?statement_id={{ statement.id }}" class="btn-primary" style="padding: 0.45rem 0.85rem; font-size: 0.82rem; text-decoration: none; display: inline-flex; align-items: center; gap: 0.4rem;">
+                <span>📄</span> Export PDF
+            </a>
+            <a href="{% url 'portfolio:export_report' 'xlsx' %}?statement_id={{ statement.id }}" class="btn-secondary" style="padding: 0.45rem 0.85rem; font-size: 0.82rem; text-decoration: none; display: inline-flex; align-items: center; gap: 0.4rem;">
+                <span>📊</span> Excel
+            </a>
+            <a href="{% url 'portfolio:export_report' 'csv' %}?statement_id={{ statement.id }}" class="btn-secondary" style="padding: 0.45rem 0.85rem; font-size: 0.82rem; text-decoration: none; display: inline-flex; align-items: center; gap: 0.4rem;">
+                <span>📋</span> CSV
+            </a>
+            <a href="{% url 'portfolio:export_report' 'md' %}?statement_id={{ statement.id }}" class="btn-secondary" style="padding: 0.45rem 0.85rem; font-size: 0.82rem; text-decoration: none; display: inline-flex; align-items: center; gap: 0.4rem;">
+                <span>📝</span> Markdown
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Prominent Statutory Compliance Disclaimer -->
+<div style="background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 8px; padding: 0.85rem 1.25rem; margin-bottom: 1.5rem; display: flex; align-items: flex-start; gap: 0.75rem;">
+    <span style="font-size: 1.25rem; line-height: 1;">⚖️</span>
+    <div style="font-size: 0.78rem; color: #fbbf24; line-height: 1.45;">
+        <strong>COMPLIANCE DISCLAIMER:</strong> {{ disclaimer }}
+    </div>
+</div>
+
+<!-- Statement Ingestion & Upload Section -->
+<div class="fin-card" style="margin-bottom: 1.5rem; padding: 1.25rem;">
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1rem;">
+        <div class="fin-card-title" style="margin-bottom: 0;">
+            <span>📁</span>
+            <span>Broker Statement Ingestion Engine</span>
+        </div>
+        <div style="display: flex; gap: 0.4rem; font-size: 0.72rem; font-family: var(--font-mono);">
+            <span style="background: rgba(59, 130, 246, 0.15); color: #60a5fa; padding: 0.2rem 0.5rem; border-radius: 4px;">CSV</span>
+            <span style="background: rgba(16, 185, 129, 0.15); color: #10b981; padding: 0.2rem 0.5rem; border-radius: 4px;">XLSX / XLS</span>
+            <span style="background: rgba(239, 68, 68, 0.15); color: #f87171; padding: 0.2rem 0.5rem; border-radius: 4px;">PDF</span>
+            <span style="background: rgba(168, 85, 247, 0.15); color: #c084fc; padding: 0.2rem 0.5rem; border-radius: 4px;">DOCX</span>
+        </div>
+    </div>
+
+    {% if success_msg %}
+    <div style="background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.3); color: #34d399; padding: 0.75rem 1rem; border-radius: 6px; font-size: 0.85rem; margin-bottom: 1rem; display: flex; align-items: center; justify-content: space-between;">
+        <span>✓ {{ success_msg }}</span>
+    </div>
+    {% endif %}
+
+    {% if error_msg %}
+    <div style="background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.3); color: #f87171; padding: 0.75rem 1rem; border-radius: 6px; font-size: 0.85rem; margin-bottom: 1rem;">
+        ⚠️ {{ error_msg }}
+    </div>
+    {% endif %}
+
+    <form method="post" enctype="multipart/form-data" id="portfolioUploadForm" style="display: flex; flex-wrap: wrap; gap: 1rem; align-items: center; justify-content: space-between;">
+        {% csrf_token %}
+        <div style="display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; flex: 1;">
+            <input type="file" name="portfolio_file" id="portfolioFileInput" accept=".csv, .xlsx, .xls, .pdf, .docx" required
+                   style="color: var(--text-secondary); font-size: 0.85rem; background: var(--bg-input); padding: 0.5rem; border-radius: 6px; border: 1px solid var(--border-color); max-width: 380px;">
+            <button type="submit" class="btn-primary" style="padding: 0.55rem 1.25rem; font-size: 0.85rem; font-weight: 700;">
+                ⚡ Upload &amp; Analyze
+            </button>
+            <button type="button" id="previewBtn" class="btn-secondary" style="padding: 0.55rem 1rem; font-size: 0.85rem;">
+                🔍 Preview Columns
+            </button>
+            <button type="button" id="resetFileBtn" class="btn-secondary" style="padding: 0.55rem 1rem; font-size: 0.85rem;" title="Clear selected file">
+                ↺ Reset File
+            </button>
+            <a href="{% url 'portfolio:reset' %}?mode=default" class="btn-secondary" style="padding: 0.55rem 1rem; font-size: 0.85rem; text-decoration: none;" title="Reload standard FYERS sample portfolio">
+                🔄 Reset to Sample
+            </a>
+        </div>
+
+        {% if recent_statements %}
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+            <span class="text-secondary" style="font-size: 0.8rem;">Switch Statement:</span>
+            <select class="fin-select" onchange="window.location.href='?statement_id=' + this.value" style="font-size: 0.8rem; padding: 0.4rem 0.6rem;">
+                {% for st in recent_statements %}
+                <option value="{{ st.id }}" {% if statement and statement.id == st.id %}selected{% endif %}>
+                    {{ st.filename }} ({{ st.statement_date }})
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        {% endif %}
+    </form>
+
+    <!-- AJAX Preview Modal / Container -->
+    <div id="previewContainer" style="display: none; margin-top: 1.25rem; border-top: 1px solid var(--border-color); padding-top: 1rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+            <span style="font-weight: 700; color: #fff; font-size: 0.88rem;">📋 Statement Extraction Preview</span>
+            <button type="button" onclick="document.getElementById('previewContainer').style.display='none'" class="btn-secondary" style="padding: 0.2rem 0.5rem; font-size: 0.75rem;">✕ Close</button>
+        </div>
+        <div id="previewMeta" style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 0.75rem; font-family: var(--font-mono);"></div>
+        <div class="fin-table-container" style="max-height: 240px; overflow-y: auto;">
+            <table class="fin-table" id="previewTable" style="font-size: 0.75rem;">
+                <thead>
+                    <tr>
+                        <th>Symbol</th>
+                        <th>Name</th>
+                        <th>Qty</th>
+                        <th>Buy Price</th>
+                        <th>Current Price</th>
+                        <th>Current Value</th>
+                        <th>P&amp;L (%)</th>
+                        <th>ISIN</th>
+                    </tr>
+                </thead>
+                <tbody id="previewBody"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+{% if metrics %}
+<!-- Executive Portfolio Stats Grid -->
+<div class="kpi-grid" style="margin-bottom: 1.5rem;">
+    <div class="kpi-card" style="border-top-color: #3b82f6;">
+        <div class="kpi-label">Invested Capital</div>
+        <div class="kpi-value font-mono">₹{{ metrics.total_invested|floatformat:0 }}</div>
+        <div class="kpi-delta text-secondary">{{ metrics.stock_count }} Holdings Monitored</div>
+    </div>
+    <div class="kpi-card" style="border-top-color: #10b981;">
+        <div class="kpi-label">Current Portfolio Value</div>
+        <div class="kpi-value font-mono" style="color: #60a5fa;">₹{{ metrics.total_current|floatformat:0 }}</div>
+        <div class="kpi-delta text-secondary">Evaluated Market Value</div>
+    </div>
+    <div class="kpi-card" style="border-top-color: {% if metrics.total_pnl >= 0 %}#10b981{% else %}#ef4444{% endif %};">
+        <div class="kpi-label">Unrealized Net P&amp;L</div>
+        <div class="kpi-value font-mono {% if metrics.total_pnl >= 0 %}text-positive{% else %}text-negative{% endif %}">
+            {% if metrics.total_pnl > 0 %}+{% endif %}₹{{ metrics.total_pnl|floatformat:0 }}
+        </div>
+        <div class="kpi-delta {% if metrics.total_pnl >= 0 %}text-positive{% else %}text-negative{% endif %} font-mono">
+            {% if metrics.total_pnl_pct > 0 %}+{% endif %}{{ metrics.total_pnl_pct|floatformat:2 }}% Return
+        </div>
+    </div>
+    <div class="kpi-card" style="border-top-color: #8b5cf6;">
+        <div class="kpi-label">Portfolio Quality Score</div>
+        <div class="kpi-value font-mono" style="color: #a78bfa;">{{ metrics.portfolio_quality_score|floatformat:1 }}<span style="font-size: 0.9rem; color: var(--text-muted);">/100</span></div>
+        <div class="kpi-delta text-secondary">Weighted Fundamental Moat</div>
+    </div>
+    <div class="kpi-card" style="border-top-color: #06b6d4;">
+        <div class="kpi-label">Diversification Score</div>
+        <div class="kpi-value font-mono" style="color: #22d3ee;">{{ metrics.portfolio_diversification_score|floatformat:1 }}<span style="font-size: 0.9rem; color: var(--text-muted);">/100</span></div>
+        <div class="kpi-delta text-secondary">HHI Breadth Index</div>
+    </div>
+    <div class="kpi-card" style="border-top-color: #f59e0b;">
+        <div class="kpi-label">Portfolio Risk Score</div>
+        <div class="kpi-value font-mono {% if metrics.portfolio_risk_score > 60 %}text-negative{% else %}text-positive{% endif %}">
+            {{ metrics.portfolio_risk_score|floatformat:1 }}<span style="font-size: 0.9rem; color: var(--text-muted);">/100</span>
+        </div>
+        <div class="kpi-delta text-secondary">{{ metrics.portfolio_research_rating|truncatechars:26 }}</div>
+    </div>
+</div>
+
+<!-- Charts & Data Grid: Sector Allocation, Stock Weights, Market Cap -->
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 1.5rem; margin-bottom: 1.5rem;">
+    <!-- Sector Allocation Card with Chart & Data Breakdown -->
+    <div class="fin-card">
+        <div class="fin-card-header">
+            <div class="fin-card-title">
+                <span>🥧</span>
+                <span>Sector-Wise Asset Allocation</span>
+            </div>
+            <span class="text-secondary font-mono" style="font-size: 0.8rem;">{{ metrics.sector_allocation|length }} Sectors</span>
+        </div>
+        <!-- Chart Canvas -->
+        <div style="height: 220px; position: relative; margin-bottom: 1rem;">
+            <canvas id="sectorChart"></canvas>
+        </div>
+        <!-- Direct Sector Data Table -->
+        <div style="border-top: 1px solid var(--border-color); padding-top: 0.75rem;">
+            <div style="display: flex; justify-content: space-between; font-size: 0.72rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; margin-bottom: 0.5rem; letter-spacing: 0.05em;">
+                <span>Sector Name</span>
+                <span>Weight / Market Value</span>
+            </div>
+            <div style="max-height: 210px; overflow-y: auto; padding-right: 0.35rem;">
+                {% for sec_name, sec_data in metrics.sector_allocation.items %}
+                <div style="margin-bottom: 0.55rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.78rem; margin-bottom: 0.2rem;">
+                        <div style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 65%;">
+                            <span style="color: #e2e8f0; font-weight: 500;" title="{{ sec_name }}">{{ sec_name }}</span>
+                            <span class="text-secondary font-mono" style="font-size: 0.7rem; margin-left: 0.25rem;">({{ sec_data.stocks|length }} stock{{ sec_data.stocks|length|pluralize }})</span>
+                        </div>
+                        <div class="font-mono" style="text-align: right;">
+                            <span style="color: #60a5fa; font-weight: 700;">{{ sec_data.weight_pct }}%</span>
+                            <span class="text-secondary" style="font-size: 0.72rem; margin-left: 0.35rem;">₹{{ sec_data.value|floatformat:0 }}</span>
+                        </div>
+                    </div>
+                    <div style="width: 100%; background: rgba(255,255,255,0.06); height: 4px; border-radius: 2px;">
+                        <div style="width: {{ sec_data.weight_pct }}%; background: #3b82f6; height: 4px; border-radius: 2px;"></div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Stock Weights Card with Chart & Ranked Holdings Data -->
+    <div class="fin-card">
+        <div class="fin-card-header">
+            <div class="fin-card-title">
+                <span>📊</span>
+                <span>Top Individual Stock Weights (%)</span>
+            </div>
+            <span class="text-secondary font-mono" style="font-size: 0.8rem;">Top 10 Positions</span>
+        </div>
+        <!-- Chart Canvas -->
+        <div style="height: 220px; position: relative; margin-bottom: 1rem;">
+            <canvas id="stockWeightsChart"></canvas>
+        </div>
+        <!-- Direct Stock Weights Data Table -->
+        <div style="border-top: 1px solid var(--border-color); padding-top: 0.75rem;">
+            <div style="display: flex; justify-content: space-between; font-size: 0.72rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; margin-bottom: 0.5rem; letter-spacing: 0.05em;">
+                <span>Stock / Shares</span>
+                <span>Weight / Position Value</span>
+            </div>
+            <div style="max-height: 210px; overflow-y: auto; padding-right: 0.35rem;">
+                {% for h in metrics.holdings_analysis|slice:":10" %}
+                <div style="margin-bottom: 0.55rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.78rem; margin-bottom: 0.2rem;">
+                        <div>
+                            <span class="font-mono" style="color: #fff; font-weight: 700;">{{ h.clean_symbol }}</span>
+                            <span class="text-secondary" style="font-size: 0.72rem; margin-left: 0.25rem;">({{ h.quantity|floatformat:0 }} shs)</span>
+                        </div>
+                        <div class="font-mono" style="text-align: right;">
+                            <span style="font-weight: 700; color: {% if h.weight_pct > 15 %}#f59e0b{% else %}#10b981{% endif %};">{{ h.weight_pct }}%</span>
+                            <span class="text-secondary" style="font-size: 0.72rem; margin-left: 0.35rem;">₹{{ h.current_value|floatformat:0 }}</span>
+                        </div>
+                    </div>
+                    <div style="width: 100%; background: rgba(255,255,255,0.06); height: 4px; border-radius: 2px;">
+                        <div style="width: {{ h.weight_pct }}%; background: {% if h.weight_pct > 15 %}#f59e0b{% else %}#10b981{% endif %}; height: 4px; border-radius: 2px;"></div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Market Cap Allocation Card with Chart & Tier Data -->
+    <div class="fin-card">
+        <div class="fin-card-header">
+            <div class="fin-card-title">
+                <span>🏛️</span>
+                <span>Market-Cap Tier Distribution</span>
+            </div>
+            <span class="text-secondary font-mono" style="font-size: 0.8rem;">Large vs. Mid vs. Micro</span>
+        </div>
+        <!-- Chart Canvas -->
+        <div style="height: 220px; position: relative; margin-bottom: 1rem;">
+            <canvas id="mcapChart"></canvas>
+        </div>
+        <!-- Direct Market Cap Tier Data Table -->
+        <div style="border-top: 1px solid var(--border-color); padding-top: 0.75rem;">
+            <div style="display: flex; justify-content: space-between; font-size: 0.72rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; margin-bottom: 0.5rem; letter-spacing: 0.05em;">
+                <span>Market Cap Tier</span>
+                <span>Weight / Allocation</span>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 0.45rem; max-height: 210px; overflow-y: auto; padding-right: 0.35rem;">
+                {% for tier_name, tier_data in metrics.market_cap_allocation.items %}
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 0.65rem; background: rgba(255, 255, 255, 0.03); border-radius: 6px; font-size: 0.78rem;">
+                    <div>
+                        <span style="font-weight: 700; color: #fff;">{{ tier_name }}</span>
+                        <span class="text-secondary font-mono" style="font-size: 0.7rem; margin-left: 0.3rem;">({{ tier_data.stocks|length }} stock{{ tier_data.stocks|length|pluralize }})</span>
+                    </div>
+                    <div class="font-mono" style="text-align: right;">
+                        <span style="font-weight: 700; color: #38bdf8;">{{ tier_data.weight_pct }}%</span>
+                        <span class="text-secondary" style="font-size: 0.72rem; margin-left: 0.35rem;">₹{{ tier_data.value|floatformat:0 }}</span>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Performance Extremes: Best & Worst Performers -->
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.5rem; margin-bottom: 1.5rem;">
+    <!-- Best Performers -->
+    <div class="fin-card">
+        <div class="fin-card-header">
+            <div class="fin-card-title">
+                <span>🚀</span>
+                <span>Top Performing Holdings (Alpha Contributors)</span>
+            </div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+            {% for b in metrics.best_performers %}
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.6rem 0.8rem; background: rgba(16, 185, 129, 0.06); border-radius: 6px; border-left: 3px solid #10b981;">
+                <div>
+                    <div style="font-weight: 700; color: #fff; font-size: 0.88rem;">{{ b.symbol }}</div>
+                    <div style="font-size: 0.72rem; color: var(--text-secondary);">{{ b.name|truncatechars:28 }} ({{ b.weight_pct }}% wt)</div>
+                </div>
+                <div style="text-align: right;" class="font-mono">
+                    <div class="text-positive" style="font-weight: 700; font-size: 0.95rem;">+{{ b.pnl_pct|floatformat:1 }}%</div>
+                    <div style="font-size: 0.72rem; color: var(--text-secondary);">+₹{{ b.pnl_amount|floatformat:0 }}</div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="text-secondary" style="font-size: 0.85rem; padding: 1rem;">No positive performers in statement.</div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Worst Performers -->
+    <div class="fin-card">
+        <div class="fin-card-header">
+            <div class="fin-card-title">
+                <span>🔻</span>
+                <span>Lagging Holdings (Capital Drag)</span>
+            </div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+            {% for w in metrics.worst_performers %}
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.6rem 0.8rem; background: rgba(239, 68, 68, 0.06); border-radius: 6px; border-left: 3px solid #ef4444;">
+                <div>
+                    <div style="font-weight: 700; color: #fff; font-size: 0.88rem;">{{ w.symbol }}</div>
+                    <div style="font-size: 0.72rem; color: var(--text-secondary);">{{ w.name|truncatechars:28 }} ({{ w.weight_pct }}% wt)</div>
+                </div>
+                <div style="text-align: right;" class="font-mono">
+                    <div class="text-negative" style="font-weight: 700; font-size: 0.95rem;">{{ w.pnl_pct|floatformat:1 }}%</div>
+                    <div style="font-size: 0.72rem; color: var(--text-secondary);">₹{{ w.pnl_amount|floatformat:0 }}</div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="text-secondary" style="font-size: 0.85rem; padding: 1rem;">No negative performers in statement.</div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- Concentration, Corporate Clusters & Overlap Flags -->
+<div class="fin-card" style="margin-bottom: 1.5rem;">
+    <div class="fin-card-header">
+        <div class="fin-card-title">
+            <span>🛡️</span>
+            <span>Concentration Guardrails &amp; Overlapping Exposures</span>
+        </div>
+        <span class="text-secondary font-mono" style="font-size: 0.8rem;">Prudential Thresholds: 15% Stock, 30% Sector</span>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1rem;">
+        <!-- Excessive Single-Stock / Sector Concentration -->
+        <div style="background: var(--bg-input); padding: 1rem; border-radius: 8px;">
+            <div style="font-weight: 700; color: #fff; margin-bottom: 0.6rem; font-size: 0.88rem;">
+                🚨 Concentration Alerts
+            </div>
+            {% if metrics.excessive_concentration_stocks %}
+                {% for item in metrics.excessive_concentration_stocks %}
+                <div style="margin-bottom: 0.6rem; padding: 0.5rem; background: rgba(239, 68, 68, 0.1); border-radius: 6px; border: 1px solid rgba(239, 68, 68, 0.25);">
+                    <div style="display: flex; justify-content: space-between; font-size: 0.82rem; font-weight: 700;">
+                        <span style="color: #f87171;">{{ item.name }}</span>
+                        <span class="font-mono text-negative">{{ item.weight_pct|floatformat:1 }}%</span>
+                    </div>
+                    <div style="font-size: 0.72rem; color: var(--text-secondary); margin-top: 0.2rem;">
+                        {{ item.reason }}
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div style="font-size: 0.8rem; color: #10b981;">
+                    ✅ No single stock exceeds the 15% concentration threshold.
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- Corporate Group Clusters & Overlaps -->
+        <div style="background: var(--bg-input); padding: 1rem; border-radius: 8px;">
+            <div style="font-weight: 700; color: #fff; margin-bottom: 0.6rem; font-size: 0.88rem;">
+                🔗 Duplicate &amp; Cluster Exposures
+            </div>
+            {% if metrics.overlapping_exposures %}
+                {% for grp in metrics.overlapping_exposures %}
+                <div style="margin-bottom: 0.6rem; padding: 0.5rem; background: rgba(59, 130, 246, 0.08); border-radius: 6px; border: 1px solid rgba(59, 130, 246, 0.25);">
+                    <div style="display: flex; justify-content: space-between; font-size: 0.82rem; font-weight: 700;">
+                        <span style="color: #60a5fa;">{{ grp.group_name }}</span>
+                        <span class="font-mono" style="color: #60a5fa;">{{ grp.combined_weight_pct|floatformat:1 }}% Combined</span>
+                    </div>
+                    <div style="font-size: 0.72rem; color: var(--text-secondary); margin-top: 0.2rem;">
+                        {{ grp.insight }}
+                    </div>
+                    <div style="font-size: 0.7rem; color: #94a3b8; margin-top: 0.2rem; font-family: var(--font-mono);">
+                        Holdings: {{ grp.stocks|join:", " }}
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div style="font-size: 0.8rem; color: #10b981;">
+                    ✅ No correlated corporate group clusters or duplicate ETF exposures detected.
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Dalal Street Superinvestor Co-Investment & Overlap Analysis -->
+<div class="fin-card" style="margin-bottom: 1.5rem; border-top: 4px solid #f59e0b;">
+    <div class="fin-card-header">
+        <div class="fin-card-title">
+            <span>🏆</span>
+            <span>Dalal Street Superinvestor Co-Investment &amp; Overlap Analysis</span>
+        </div>
+        <div>
+            {% if superinvestor_overlap.has_overlap %}
+            <span style="background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); font-size: 0.78rem; font-weight: 700; padding: 0.2rem 0.6rem; border-radius: 4px;">
+                {{ superinvestor_overlap.unique_overlap_count }} Common Stocks ({{ superinvestor_overlap.total_co_invested_pct }}% Co-Invested)
+            </span>
+            {% else %}
+            <span style="background: rgba(148, 163, 184, 0.1); color: #94a3b8; font-size: 0.78rem; padding: 0.2rem 0.6rem; border-radius: 4px;">
+                No Guru Overlaps
+            </span>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if superinvestor_overlap.has_overlap %}
+    <!-- Summary KPI Cards -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.25rem;">
+        <div style="background: var(--bg-input); padding: 0.85rem 1rem; border-radius: 8px; border-left: 3px solid #f59e0b;">
+            <div class="text-secondary" style="font-size: 0.7rem; text-transform: uppercase;">Co-Invested Capital Weight</div>
+            <div class="font-mono" style="font-size: 1.35rem; font-weight: 800; color: #fbbf24; margin-top: 0.2rem;">
+                {{ superinvestor_overlap.total_co_invested_pct }}%
+            </div>
+            <div style="font-size: 0.72rem; color: #94a3b8; margin-top: 0.2rem;">Of your total portfolio is shared with Top Gurus</div>
+        </div>
+        <div style="background: var(--bg-input); padding: 0.85rem 1rem; border-radius: 8px; border-left: 3px solid #10b981;">
+            <div class="text-secondary" style="font-size: 0.7rem; text-transform: uppercase;">Institutional High-Conviction Stocks</div>
+            <div class="font-mono" style="font-size: 1.35rem; font-weight: 800; color: #34d399; margin-top: 0.2rem;">
+                {{ superinvestor_overlap.unique_overlap_count }} Holdings
+            </div>
+            <div style="font-size: 0.72rem; color: #94a3b8; margin-top: 0.2rem;">Held in Dalal Street's Top 10 Portfolios</div>
+        </div>
+        <div style="background: var(--bg-input); padding: 0.85rem 1rem; border-radius: 8px; border-left: 3px solid #3b82f6;">
+            <div class="text-secondary" style="font-size: 0.7rem; text-transform: uppercase;">Top Guru Alignment</div>
+            <div style="font-size: 1.05rem; font-weight: 700; color: #60a5fa; margin-top: 0.2rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                {{ superinvestor_overlap.ranked_gurus.0.icon }} {{ superinvestor_overlap.ranked_gurus.0.name }}
+            </div>
+            <div style="font-size: 0.72rem; color: #94a3b8; margin-top: 0.2rem;">
+                {{ superinvestor_overlap.ranked_gurus.0.shared_count }} stock(s) in common ({{ superinvestor_overlap.ranked_gurus.0.shared_weight }}% wt)
+            </div>
+        </div>
+    </div>
+
+    <!-- Ranked Gurus Badges Row -->
+    <div style="margin-bottom: 1.25rem;">
+        <div style="font-size: 0.76rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 0.5rem; letter-spacing: 0.05em;">
+            Top 10 Portfolios Sharing Holdings with You:
+        </div>
+        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+            {% for g in superinvestor_overlap.ranked_gurus %}
+            <a href="{% url 'portfolio:top_portfolio_detail' g.id %}" style="text-decoration: none; display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.4rem 0.75rem; background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 6px; font-size: 0.78rem; color: #93c5fd; transition: all 0.2s;">
+                <span>{{ g.icon }}</span>
+                <strong>{{ g.name }}</strong>
+                <span class="font-mono" style="background: rgba(59, 130, 246, 0.25); color: #fff; padding: 0.1rem 0.35rem; border-radius: 4px; font-size: 0.7rem;">{{ g.shared_count }} stocks ({{ g.shared_weight }}%)</span>
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Detailed Matched Holdings Table -->
+    <div style="overflow-x: auto;">
+        <table class="fin-table" style="font-size: 0.82rem; width: 100%;">
+            <thead>
+                <tr>
+                    <th>Stock / Ticker</th>
+                    <th>Your Weight</th>
+                    <th>Your Value</th>
+                    <th>Co-Investing Superinvestors &amp; Investment Rationale</th>
+                    <th style="text-align: right;">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in superinvestor_overlap.matched_holdings %}
+                <tr>
+                    <td>
+                        <div style="font-weight: 800; color: #fff;" class="font-mono">{{ item.clean_symbol }}</div>
+                        <div style="font-size: 0.72rem; color: var(--text-secondary);">{{ item.stock_name }}</div>
+                        <div style="font-size: 0.68rem; color: #94a3b8;">{{ item.sector }}</div>
+                    </td>
+                    <td class="font-mono" style="font-weight: 700; color: #34d399;">
+                        {{ item.user_weight }}%
+                    </td>
+                    <td class="font-mono text-secondary">
+                        ₹{{ item.user_current_value|floatformat:0 }}
+                    </td>
+                    <td>
+                        <div style="display: flex; flex-direction: column; gap: 0.45rem;">
+                            {% for guru in item.gurus %}
+                            <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.07); border-radius: 6px; padding: 0.5rem 0.65rem;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.2rem;">
+                                    <a href="{% url 'portfolio:top_portfolio_detail' guru.portfolio_id %}" style="color: #60a5fa; font-weight: 700; text-decoration: none; font-size: 0.78rem;">
+                                        {{ guru.icon }} {{ guru.portfolio_name }}
+                                    </a>
+                                    <span class="font-mono" style="font-size: 0.72rem; color: #fbbf24; font-weight: 700;">
+                                        {{ guru.guru_weight }}% Guru Weight
+                                    </span>
+                                </div>
+                                <div style="font-size: 0.74rem; color: #cbd5e1; line-height: 1.4;">
+                                    <strong>Rationale:</strong> {{ guru.primary_reason }}
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </td>
+                    <td style="text-align: right; vertical-align: top;">
+                        <a href="{% url 'research:stock_detail' item.clean_symbol %}" class="btn-secondary" style="padding: 0.3rem 0.6rem; font-size: 0.74rem; text-decoration: none; display: inline-flex; align-items: center; gap: 0.25rem;">
+                            <span>🔍</span> Analyze
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% else %}
+    <div style="background: var(--bg-input); padding: 1.5rem; border-radius: 8px; text-align: center;">
+        <div style="font-size: 1.8rem; margin-bottom: 0.5rem;">🔍</div>
+        <div style="font-size: 0.95rem; font-weight: 700; color: #fff; margin-bottom: 0.25rem;">
+            No Direct Overlap with Top 10 Portfolios Detected
+        </div>
+        <p style="font-size: 0.82rem; color: var(--text-secondary); max-width: 600px; margin: 0 auto 1rem auto; line-height: 1.5;">
+            Your holdings represent independent positions not currently held in Dalal Street's top 10 superinvestor portfolios. You can explore the Top 10 Portfolios to clone ideas or compare asset allocations.
+        </p>
+        <a href="{% url 'portfolio:top_portfolios' %}" class="btn-primary" style="padding: 0.45rem 1rem; font-size: 0.82rem; text-decoration: none; display: inline-flex; align-items: center; gap: 0.4rem;">
+            <span>🏆</span> Explore Top 10 Superinvestor Portfolios
+        </a>
+    </div>
+    {% endif %}
+</div>
+
+<!-- 9 Legendary Investor Strategy Profile -->
+<div class="fin-card" style="margin-bottom: 1.5rem;">
+    <div class="fin-card-header">
+        <div class="fin-card-title">
+            <span>🏛️</span>
+            <span>9 Legendary Investor Strategy Scorecard</span>
+        </div>
+        <div>
+            <span class="action-badge action-strong-buy" style="font-size: 0.8rem;">
+                Dominant Match: {{ style_profile.best_matching_investor }}
+            </span>
+        </div>
+    </div>
+
+    <!-- Style Alignment Banner -->
+    <div style="background: rgba(139, 92, 246, 0.08); border: 1px solid rgba(139, 92, 246, 0.25); border-radius: 8px; padding: 1rem; margin-bottom: 1.25rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+            <div>
+                <span style="font-size: 0.75rem; text-transform: uppercase; color: #a78bfa; font-weight: 700;">Portfolio Style Profile</span>
+                <div style="font-size: 1.15rem; font-weight: 800; color: #fff;">{{ style_profile.dominant_style }}</div>
+            </div>
+            <div style="font-family: var(--font-mono); font-size: 0.85rem; color: #c4b5fd;">
+                Alignment Score: <strong>{{ style_profile.top_score|floatformat:1 }} / 100</strong>
+            </div>
+        </div>
+        <div style="font-size: 0.82rem; color: #e2e8f0; margin-top: 0.5rem; line-height: 1.5;">
+            {{ style_profile.portfolio_orientation_summary }}
+        </div>
+    </div>
+
+    <!-- 9 Strategies Matrix -->
+    <div class="fin-table-container">
+        <table class="fin-table">
+            <thead>
+                <tr>
+                    <th>Strategy &amp; Legendary Investor</th>
+                    <th>Average Score</th>
+                    <th>Research Verdict</th>
+                    <th>Core Mandate</th>
+                    <th>Aligned Holdings in Portfolio</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in style_profile.strategy_rows %}
+                <tr>
+                    <td style="font-weight: 700; color: #fff;">
+                        {{ row.strategy }}
+                        {% if row.is_top %}
+                        <span style="background: rgba(16, 185, 129, 0.2); color: #10b981; font-size: 0.68rem; padding: 0.1rem 0.35rem; border-radius: 4px; margin-left: 0.4rem;">★ Top Match</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <span class="score-badge {% if row.score >= 70 %}score-high{% elif row.score >= 50 %}score-med{% else %}score-low{% endif %}">
+                            {{ row.score|floatformat:1 }}
+                        </span>
+                    </td>
+                    <td>
+                        <span class="action-badge {% if row.score >= 70 %}action-strong-buy{% elif row.score >= 50 %}action-research{% else %}action-avoid{% endif %}">
+                            {% if row.score >= 70 %}Strong Fit{% elif row.score >= 50 %}Moderate Fit{% else %}Weak Fit{% endif %}
+                        </span>
+                    </td>
+                    <td class="text-secondary" style="font-size: 0.8rem;">
+                        {% if row.strategy == "Warren Buffett" %}Durable Moat, High ROCE (>18%), Strong FCF
+                        {% elif row.strategy == "Charlie Munger" %}Rational Quality, Avoid Corporate Gamesmanship
+                        {% elif row.strategy == "Benjamin Graham" %}Deep Value, Tangible Asset Margin of Safety
+                        {% elif row.strategy == "Peter Lynch" %}GARP, Understandable 20%+ EPS Growers
+                        {% elif row.strategy == "Joel Greenblatt" %}Magic Formula: Top ROC + High Earnings Yield
+                        {% elif row.strategy == "Rakesh Jhunjhunwala" %}Domestic India Scalability, High Operating Leverage
+                        {% elif row.strategy == "Philip Fisher" %}R&amp;D Innovation, Long-term Customer Stickiness
+                        {% elif row.strategy == "Dolly Khanna" %}Niche Small/Mid-Cap Compounding Leadership
+                        {% elif row.strategy == "Porinju Veliyath" %}Contrarian Special Situations &amp; Turnarounds
+                        {% endif %}
+                    </td>
+                    <td class="font-mono text-positive" style="font-size: 0.8rem;">
+                        {{ row.aligned_stocks }}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Complete Holdings & Forensics Table -->
+<div class="fin-card" style="margin-bottom: 1.5rem;">
+    <div class="fin-card-header">
+        <div class="fin-card-title">
+            <span>📋</span>
+            <span>Extracted Portfolio Holdings Matrix</span>
+        </div>
+        <span class="text-secondary font-mono" style="font-size: 0.8rem;">Showing {{ metrics.holdings_analysis|length }} securities</span>
+    </div>
+
+    <div class="fin-table-container">
+        <table class="fin-table">
+            <thead>
+                <tr>
+                    <th>Symbol &amp; Company</th>
+                    <th>Sector</th>
+                    <th>Cap Tier</th>
+                    <th>Qty</th>
+                    <th>Avg Buy (₹)</th>
+                    <th>Current (₹)</th>
+                    <th>Current Val (₹)</th>
+                    <th>Weight (%)</th>
+                    <th>P&amp;L (₹)</th>
+                    <th>P&amp;L (%)</th>
+                    <th>Sizing</th>
+                    <th>Score</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for h in metrics.holdings_analysis %}
+                <tr>
+                    <td>
+                        <div style="font-weight: 700; color: #fff; font-size: 0.9rem;">
+                            {{ h.clean_symbol }}
+                            <span style="font-size: 0.7rem; color: var(--text-muted); font-family: var(--font-mono);">({{ h.exchange }})</span>
+                        </div>
+                        <div style="font-size: 0.72rem; color: var(--text-secondary); margin-top: 0.15rem;">
+                            {{ h.stock_name }}
+                        </div>
+                        {% if h.isin != "Not available in uploaded file" %}
+                        <div style="font-size: 0.65rem; color: var(--text-muted); font-family: var(--font-mono);">
+                            {{ h.isin }}
+                        </div>
+                        {% endif %}
+                    </td>
+                    <td style="font-size: 0.8rem; color: var(--text-secondary);">
+                        {{ h.sector }}
+                    </td>
+                    <td>
+                        <span style="background: rgba(255, 255, 255, 0.06); padding: 0.15rem 0.4rem; border-radius: 4px; font-size: 0.72rem; font-family: var(--font-mono);">
+                            {{ h.market_cap_tier }}
+                        </span>
+                    </td>
+                    <td class="font-mono" style="font-size: 0.82rem;">
+                        {{ h.quantity|floatformat:0 }}
+                    </td>
+                    <td class="font-mono" style="font-size: 0.82rem;">
+                        ₹{{ h.buy_price|floatformat:2 }}
+                    </td>
+                    <td class="font-mono" style="font-weight: 700; font-size: 0.85rem; color: #fff;">
+                        ₹{{ h.current_price|floatformat:2 }}
+                    </td>
+                    <td class="font-mono" style="font-weight: 700; font-size: 0.85rem; color: #60a5fa;">
+                        ₹{{ h.current_value|floatformat:0 }}
+                    </td>
+                    <td class="font-mono" style="font-weight: 700; font-size: 0.82rem;">
+                        {{ h.weight_pct|floatformat:1 }}%
+                    </td>
+                    <td class="font-mono {% if h.pnl_amount >= 0 %}text-positive{% else %}text-negative{% endif %}" style="font-size: 0.82rem;">
+                        {% if h.pnl_amount > 0 %}+{% endif %}₹{{ h.pnl_amount|floatformat:0 }}
+                    </td>
+                    <td class="font-mono {% if h.pnl_pct >= 0 %}text-positive{% else %}text-negative{% endif %}" style="font-weight: 700; font-size: 0.85rem;">
+                        {% if h.pnl_pct > 0 %}+{% endif %}{{ h.pnl_pct|floatformat:1 }}%
+                    </td>
+                    <td>
+                        <span style="font-size: 0.72rem; font-weight: 600; padding: 0.15rem 0.4rem; border-radius: 4px; {% if 'Oversized' in h.sizing_status %}background: rgba(245, 158, 11, 0.2); color: #f59e0b;{% elif 'Balanced' in h.sizing_status %}background: rgba(16, 185, 129, 0.15); color: #10b981;{% else %}background: rgba(148, 163, 184, 0.1); color: #94a3b8;{% endif %}">
+                            {{ h.sizing_status }}
+                        </span>
+                    </td>
+                    <td>
+                        <span class="score-badge {% if h.stock_score >= 70 %}score-high{% elif h.stock_score >= 50 %}score-med{% else %}score-low{% endif %}">
+                            {{ h.stock_score|floatformat:1 }}
+                        </span>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Senior Portfolio Review Analyst Breakdown -->
+<div class="fin-card" style="margin-bottom: 2rem;">
+    <div class="fin-card-header">
+        <div class="fin-card-title">
+            <span>🎓</span>
+            <span>Senior Portfolio Review &amp; Qualitative Forensics</span>
+        </div>
+        <span class="action-badge action-research" style="font-size: 0.8rem;">
+            Evidence-Based Assessment
+        </span>
+    </div>
+
+    <!-- 1. Portfolio Summary -->
+    <div style="background: var(--bg-input); padding: 1.25rem; border-radius: 8px; margin-bottom: 1.25rem;">
+        <div style="font-weight: 700; color: #60a5fa; margin-bottom: 0.4rem; font-size: 0.95rem;">
+            1. Executive Portfolio Summary
+        </div>
+        <p style="font-size: 0.85rem; color: #e2e8f0; line-height: 1.6;">
+            {{ review.portfolio_summary }}
+        </p>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.25rem; margin-bottom: 1.25rem;">
+        <!-- 2. Strengths -->
+        <div style="background: var(--bg-input); padding: 1.25rem; border-radius: 8px;">
+            <div style="font-weight: 700; color: #10b981; margin-bottom: 0.6rem; font-size: 0.92rem;">
+                2. Demonstrated Portfolio Strengths
+            </div>
+            <ul style="padding-left: 1.2rem; font-size: 0.82rem; color: #e2e8f0; line-height: 1.6;">
+                {% for st in review.strengths %}
+                <li style="margin-bottom: 0.4rem;">{{ st }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+
+        <!-- 3. Weaknesses -->
+        <div style="background: var(--bg-input); padding: 1.25rem; border-radius: 8px;">
+            <div style="font-weight: 700; color: #f59e0b; margin-bottom: 0.6rem; font-size: 0.92rem;">
+                3. Portfolio Weaknesses &amp; Friction Points
+            </div>
+            <ul style="padding-left: 1.2rem; font-size: 0.82rem; color: #e2e8f0; line-height: 1.6;">
+                {% for wk in review.weaknesses %}
+                <li style="margin-bottom: 0.4rem;">{{ wk }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.25rem; margin-bottom: 1.25rem;">
+        <!-- 4. Research Observations -->
+        <div style="background: var(--bg-input); padding: 1.25rem; border-radius: 8px;">
+            <div style="font-weight: 700; color: #38bdf8; margin-bottom: 0.6rem; font-size: 0.92rem;">
+                4. Neutral Research Observations
+            </div>
+            <ul style="padding-left: 1.2rem; font-size: 0.82rem; color: #e2e8f0; line-height: 1.6;">
+                {% for ob in review.research_observations %}
+                <li style="margin-bottom: 0.4rem;">{{ ob }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+
+        <!-- 5. Questions for the Investor -->
+        <div style="background: var(--bg-input); padding: 1.25rem; border-radius: 8px;">
+            <div style="font-weight: 700; color: #c084fc; margin-bottom: 0.6rem; font-size: 0.92rem;">
+                5. Strategic Questions for the Investor
+            </div>
+            <ul style="padding-left: 1.2rem; font-size: 0.82rem; color: #e2e8f0; line-height: 1.6;">
+                {% for q in review.questions_for_investor %}
+                <li style="margin-bottom: 0.4rem;">{{ q }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+
+    <!-- 6. Monitoring Checklist -->
+    <div style="background: var(--bg-input); padding: 1.25rem; border-radius: 8px;">
+        <div style="font-weight: 700; color: #fff; margin-bottom: 0.6rem; font-size: 0.92rem;">
+            6. Monitoring Checklist for Key Holdings
+        </div>
+        <div class="fin-table-container">
+            <table class="fin-table" style="font-size: 0.8rem;">
+                <thead>
+                    <tr>
+                        <th style="width: 25%;">Holding</th>
+                        <th>Specific Surveillance Metric &amp; Catalyst Event</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in review.monitoring_checklist %}
+                    <tr>
+                        <td style="font-weight: 700; color: #60a5fa;">{{ item.holding }}</td>
+                        <td style="color: #e2e8f0;">{{ item.metric }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% else %}
+<!-- Empty or Cleared State -->
+<div class="fin-card" style="text-align: center; padding: 3.5rem 1.5rem; margin-top: 1.5rem; border: 1px dashed var(--border-color);">
+    <div style="font-size: 2.8rem; margin-bottom: 0.75rem;">📂</div>
+    <h3 style="color: #fff; font-size: 1.3rem; font-weight: 700; margin-bottom: 0.5rem;">No Portfolio Statement Active</h3>
+    <p class="text-secondary" style="max-width: 540px; margin: 0 auto 1.5rem; font-size: 0.88rem; line-height: 1.5;">
+        Upload your broker holding statement (CSV, XLSX, XLS, PDF, or DOCX) in the ingestion box above, or click <strong>Reset to Sample</strong> to load and explore the full diagnostics for the sample FYERS portfolio.
+    </p>
+    <div style="display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap;">
+        <a href="{% url 'portfolio:reset' %}?mode=default" class="btn-primary" style="display: inline-flex; align-items: center; gap: 0.5rem; text-decoration: none; padding: 0.6rem 1.4rem;">
+            <span>🔄</span> Load Sample Portfolio
+        </a>
+    </div>
+</div>
+{% endif %}
+
+<!-- Chart.js Visualization Scripts -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // 0. Reset File Input Handler
+    const resetFileBtn = document.getElementById('resetFileBtn');
+    const fileInput = document.getElementById('portfolioFileInput');
+    const previewContainer = document.getElementById('previewContainer');
+    const previewBtn = document.getElementById('previewBtn');
+    const previewBody = document.getElementById('previewBody');
+    const previewMeta = document.getElementById('previewMeta');
+
+    if (resetFileBtn && fileInput) {
+        resetFileBtn.addEventListener('click', function() {
+            fileInput.value = '';
+            if (previewContainer) {
+                previewContainer.style.display = 'none';
+            }
+        });
+    }
+
+    if (previewBtn && fileInput) {
+        previewBtn.addEventListener('click', function() {
+            if (!fileInput.files || fileInput.files.length === 0) {
+                alert('Please select a file to preview.');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('portfolio_file', fileInput.files[0]);
+
+            // Fetch CSRF token
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+            previewBtn.innerText = 'Analyzing...';
+            previewBtn.disabled = true;
+
+            fetch("{% url 'portfolio:preview_api' %}", {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrfToken
+                },
+                body: formData
+            })
+            .then(res => res.json())
+            .then(data => {
+                previewBtn.innerText = '🔍 Preview Columns';
+                previewBtn.disabled = false;
+
+                if (data.error) {
+                    alert('Preview Error: ' + data.error);
+                    return;
+                }
+
+                if (previewContainer) previewContainer.style.display = 'block';
+                if (previewMeta) {
+                    previewMeta.innerHTML = `<strong>File:</strong> ${data.filename} (${data.file_type.toUpperCase()}) | <strong>Date:</strong> ${data.statement_date} | <strong>Holdings Detected:</strong> ${data.holdings_count} | <strong>Invested:</strong> ₹${data.total_invested.toLocaleString()}`;
+                }
+
+                if (previewBody) {
+                    previewBody.innerHTML = '';
+                    data.preview_holdings.forEach(h => {
+                        const row = `
+                            <tr>
+                                <td class="font-mono text-positive">${h.clean_symbol}</td>
+                                <td>${h.stock_name}</td>
+                                <td>${h.quantity}</td>
+                                <td>₹${h.buy_price.toFixed(2)}</td>
+                                <td>₹${h.current_price.toFixed(2)}</td>
+                                <td>₹${h.current_value.toFixed(2)}</td>
+                                <td class="${h.pnl_pct >= 0 ? 'text-positive' : 'text-negative'}">${h.pnl_pct >= 0 ? '+' : ''}${h.pnl_pct.toFixed(2)}%</td>
+                                <td class="font-mono text-secondary">${h.isin}</td>
+                            </tr>
+                        `;
+                        previewBody.insertAdjacentHTML('beforeend', row);
+                    });
+                }
+            })
+            .catch(err => {
+                previewBtn.innerText = '🔍 Preview Columns';
+                previewBtn.disabled = false;
+                alert('Failed to preview file: ' + err);
+            });
+        });
+    }
+
+    {% if metrics %}
+    // 2. Sector Allocation Donut Chart (Top 8 + Other for clean visual)
+    try {
+        const rawSectorLabels = {{ sector_labels_json|safe }};
+        const rawSectorWeights = {{ sector_weights_json|safe }};
+        const rawSectorValues = {{ sector_values_json|safe }};
+
+        // Combine into Top 8 + Other so the donut chart renders legibly without being crushed by 42 labels
+        let chartSecLabels = [];
+        let chartSecWeights = [];
+        let chartSecValues = [];
+
+        if (rawSectorLabels.length > 8) {
+            chartSecLabels = rawSectorLabels.slice(0, 8);
+            chartSecWeights = rawSectorWeights.slice(0, 8);
+            chartSecValues = rawSectorValues.slice(0, 8);
+
+            const otherWeight = rawSectorWeights.slice(8).reduce((acc, val) => acc + val, 0);
+            const otherVal = rawSectorValues.slice(8).reduce((acc, val) => acc + val, 0);
+            chartSecLabels.push(`Other (${rawSectorLabels.length - 8} Sectors)`);
+            chartSecWeights.push(parseFloat(otherWeight.toFixed(2)));
+            chartSecValues.push(parseFloat(otherVal.toFixed(2)));
+        } else {
+            chartSecLabels = rawSectorLabels;
+            chartSecWeights = rawSectorWeights;
+            chartSecValues = rawSectorValues;
+        }
+
+        const ctxSector = document.getElementById('sectorChart');
+        if (ctxSector && chartSecLabels.length > 0) {
+            new Chart(ctxSector, {
+                type: 'doughnut',
+                data: {
+                    labels: chartSecLabels,
+                    datasets: [{
+                        data: chartSecWeights,
+                        backgroundColor: [
+                            '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899',
+                            '#06b6d4', '#14b8a6', '#f97316', '#64748b'
+                        ],
+                        borderColor: '#0f172a',
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { color: '#94a3b8', font: { size: 10 }, boxWidth: 10 }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(ctx) {
+                                    return ` ${ctx.label}: ${ctx.raw}% (₹${chartSecValues[ctx.dataIndex].toLocaleString()})`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    } catch (err) {
+        console.error("Sector chart error:", err);
+    }
+
+    // 3. Stock Weights Bar Chart
+    try {
+        const stockLabels = {{ stock_labels_json|safe }};
+        const stockWeights = {{ stock_weights_json|safe }};
+
+        const ctxStock = document.getElementById('stockWeightsChart');
+        if (ctxStock && stockLabels.length > 0) {
+            new Chart(ctxStock, {
+                type: 'bar',
+                data: {
+                    labels: stockLabels,
+                    datasets: [{
+                        label: 'Portfolio Weight (%)',
+                        data: stockWeights,
+                        backgroundColor: stockWeights.map(w => w > 15 ? '#f59e0b' : '#3b82f6'),
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    indexAxis: 'y',
+                    scales: {
+                        x: {
+                            grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                            ticks: { color: '#94a3b8' }
+                        },
+                        y: {
+                            grid: { display: false },
+                            ticks: { color: '#fff', font: { family: 'monospace', weight: 'bold' } }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false }
+                    }
+                }
+            });
+        }
+    } catch (err) {
+        console.error("Stock weights chart error:", err);
+    }
+
+    // 4. Market Cap Distribution Chart
+    try {
+        const mcapLabels = {{ mcap_labels_json|safe }};
+        const mcapWeights = {{ mcap_weights_json|safe }};
+
+        const ctxMcap = document.getElementById('mcapChart');
+        if (ctxMcap && mcapLabels.length > 0) {
+            new Chart(ctxMcap, {
+                type: 'pie',
+                data: {
+                    labels: mcapLabels,
+                    datasets: [{
+                        data: mcapWeights,
+                        backgroundColor: ['#10b981', '#3b82f6', '#f59e0b', '#ec4899', '#ef4444', '#64748b'],
+                        borderColor: '#0f172a',
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { color: '#94a3b8', font: { size: 10 }, boxWidth: 10 }
+                        }
+                    }
+                }
+            });
+        }
+    } catch (err) {
+        console.error("Market cap chart error:", err);
+    }
+    {% endif %}
+});
+</script>
+{% endblock %}
