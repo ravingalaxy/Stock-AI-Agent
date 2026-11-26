@@ -1,0 +1,447 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Day Trading Dashboard — StockAgent AI{% endblock %}
+
+{% block content %}
+<div style="padding: 1rem;">
+    <!-- Header -->
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+        <div>
+            <h1 style="font-size: 1.5rem; font-weight: 700; margin: 0; color: #fff;">
+                ⚡ Day Trading & Intraday Intelligence
+            </h1>
+            <p style="font-size: 0.8rem; color: var(--text-muted); margin: 0.25rem 0 0;">
+                NSE & BSE • INR • Paper Trading Only • All 11 Skills Active
+            </p>
+        </div>
+        <div style="display: flex; gap: 0.5rem; align-items: center;">
+            <span id="paperBadge" style="background: #f59e0b; color: #000; padding: 0.3rem 0.75rem; border-radius: 20px; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.5px;">
+                📋 PAPER TRADING
+            </span>
+            <span id="marketStatusBadge" style="padding: 0.3rem 0.75rem; border-radius: 20px; font-size: 0.72rem; font-weight: 600;">
+                ⏳ Loading...
+            </span>
+        </div>
+    </div>
+
+    <!-- P&L Summary Bar -->
+    <div id="pnlBar" style="display: grid; grid-template-columns: repeat(6, 1fr); gap: 0.75rem; margin-bottom: 1.5rem;">
+        <div class="card" style="padding: 0.85rem; text-align: center;">
+            <div style="font-size: 0.72rem; color: var(--text-muted);">Available Cash</div>
+            <div id="availCash" class="font-mono" style="font-size: 1.1rem; font-weight: 700; color: #fff;">₹—</div>
+        </div>
+        <div class="card" style="padding: 0.85rem; text-align: center;">
+            <div style="font-size: 0.72rem; color: var(--text-muted);">Realized P&L</div>
+            <div id="realizedPnl" class="font-mono" style="font-size: 1.1rem; font-weight: 700;">₹—</div>
+        </div>
+        <div class="card" style="padding: 0.85rem; text-align: center;">
+            <div style="font-size: 0.72rem; color: var(--text-muted);">Unrealized P&L</div>
+            <div id="unrealizedPnl" class="font-mono" style="font-size: 1.1rem; font-weight: 700;">₹—</div>
+        </div>
+        <div class="card" style="padding: 0.85rem; text-align: center;">
+            <div style="font-size: 0.72rem; color: var(--text-muted);">Total Charges</div>
+            <div id="totalCharges" class="font-mono" style="font-size: 1.1rem; font-weight: 700; color: #94a3b8;">₹—</div>
+        </div>
+        <div class="card" style="padding: 0.85rem; text-align: center;">
+            <div style="font-size: 0.72rem; color: var(--text-muted);">Win Rate</div>
+            <div id="winRate" class="font-mono" style="font-size: 1.1rem; font-weight: 700; color: #fff;">—%</div>
+        </div>
+        <div class="card" style="padding: 0.85rem; text-align: center;">
+            <div style="font-size: 0.72rem; color: var(--text-muted);">Open Positions</div>
+            <div id="openPosCount" class="font-mono" style="font-size: 1.1rem; font-weight: 700; color: #fff;">—</div>
+        </div>
+    </div>
+
+    <!-- Main Grid: Scanner + Positions + News -->
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem;">
+        <!-- Scanner & Entry Signals -->
+        <div class="card" style="padding: 1rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                <h2 style="font-size: 0.95rem; font-weight: 600; margin: 0;">🔍 Scanner & Entry Signals</h2>
+                <div style="display: flex; gap: 0.4rem;">
+                    <button onclick="runScan('momentum')" class="btn-secondary" style="padding: 0.25rem 0.6rem; font-size: 0.72rem;">Momentum</button>
+                    <button onclick="runScan('breakout')" class="btn-secondary" style="padding: 0.25rem 0.6rem; font-size: 0.72rem;">Breakout</button>
+                    <button onclick="runScan('volume')" class="btn-secondary" style="padding: 0.25rem 0.6rem; font-size: 0.72rem;">Volume</button>
+                </div>
+            </div>
+            <div id="scanResults" style="max-height: 320px; overflow-y: auto;">
+                <div style="color: var(--text-muted); font-size: 0.82rem; padding: 2rem; text-align: center;">
+                    Click a scan type to discover opportunities
+                </div>
+            </div>
+        </div>
+
+        <!-- Open Positions -->
+        <div class="card" style="padding: 1rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                <h2 style="font-size: 0.95rem; font-weight: 600; margin: 0;">💼 Paper Positions</h2>
+                <button onclick="flattenAll()" class="btn-secondary" style="padding: 0.25rem 0.6rem; font-size: 0.72rem; color: #ef4444;">Flatten All</button>
+            </div>
+            <div id="positionsTable" style="max-height: 320px; overflow-y: auto;">
+                <div style="color: var(--text-muted); font-size: 0.82rem; padding: 2rem; text-align: center;">
+                    No open positions
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Second Row: Quick Trade + News -->
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem;">
+        <!-- Quick Paper Trade -->
+        <div class="card" style="padding: 1rem;">
+            <h2 style="font-size: 0.95rem; font-weight: 600; margin: 0 0 0.75rem;">📋 Quick Paper Trade</h2>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+                <div>
+                    <label style="font-size: 0.72rem; color: var(--text-muted);">Symbol</label>
+                    <input type="text" id="tradeSymbol" placeholder="e.g. RELIANCE" class="search-input" style="width: 100%; padding: 0.4rem;">
+                </div>
+                <div>
+                    <label style="font-size: 0.72rem; color: var(--text-muted);">Quantity</label>
+                    <input type="number" id="tradeQty" value="1" min="1" class="search-input" style="width: 100%; padding: 0.4rem;">
+                </div>
+                <div>
+                    <label style="font-size: 0.72rem; color: var(--text-muted);">Side</label>
+                    <select id="tradeSide" class="search-input" style="width: 100%; padding: 0.4rem;">
+                        <option value="BUY">BUY</option>
+                        <option value="SELL">SELL</option>
+                    </select>
+                </div>
+                <div>
+                    <label style="font-size: 0.72rem; color: var(--text-muted);">Exchange</label>
+                    <select id="tradeExchange" class="search-input" style="width: 100%; padding: 0.4rem;">
+                        <option value="NSE">NSE</option>
+                        <option value="BSE">BSE</option>
+                    </select>
+                </div>
+            </div>
+            <div style="display: flex; gap: 0.5rem; margin-top: 0.75rem;">
+                <button onclick="submitPaperOrder()" class="btn-primary" style="flex: 1; padding: 0.5rem; font-size: 0.82rem;">
+                    Submit Paper Order
+                </button>
+                <button onclick="getEntrySignal()" class="btn-secondary" style="padding: 0.5rem; font-size: 0.82rem;">
+                    📊 Get Signal
+                </button>
+            </div>
+            <div id="tradeResult" style="margin-top: 0.5rem; font-size: 0.78rem;"></div>
+        </div>
+
+        <!-- News & Sentiment -->
+        <div class="card" style="padding: 1rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                <h2 style="font-size: 0.95rem; font-weight: 600; margin: 0;">📰 News & Sentiment</h2>
+                <button onclick="refreshNews()" class="btn-secondary" style="padding: 0.25rem 0.6rem; font-size: 0.72rem;">Refresh</button>
+            </div>
+            <div id="newsPanel" style="max-height: 280px; overflow-y: auto;">
+                <div style="color: var(--text-muted); font-size: 0.82rem; padding: 2rem; text-align: center;">
+                    Loading news...
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Third Row: Backtest + Order History -->
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem;">
+        <!-- Backtest / Time Machine -->
+        <div class="card" style="padding: 1rem;">
+            <h2 style="font-size: 0.95rem; font-weight: 600; margin: 0 0 0.75rem;">🕰️ Time Machine (Backtest)</h2>
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.5rem;">
+                <div>
+                    <label style="font-size: 0.72rem; color: var(--text-muted);">Symbol</label>
+                    <input type="text" id="btSymbol" placeholder="RELIANCE" class="search-input" style="width: 100%; padding: 0.4rem;">
+                </div>
+                <div>
+                    <label style="font-size: 0.72rem; color: var(--text-muted);">Strategy</label>
+                    <select id="btStrategy" class="search-input" style="width: 100%; padding: 0.4rem;">
+                        <option value="ORB">ORB</option>
+                        <option value="MOMENTUM">Momentum</option>
+                        <option value="BREAKOUT">Breakout</option>
+                    </select>
+                </div>
+                <div>
+                    <label style="font-size: 0.72rem; color: var(--text-muted);">Days</label>
+                    <input type="number" id="btDays" value="60" min="5" max="180" class="search-input" style="width: 100%; padding: 0.4rem;">
+                </div>
+            </div>
+            <button onclick="runBacktest()" class="btn-primary" style="width: 100%; margin-top: 0.5rem; padding: 0.5rem; font-size: 0.82rem;">
+                🚀 Run Backtest
+            </button>
+            <div id="backtestResult" style="margin-top: 0.5rem; font-size: 0.78rem; max-height: 200px; overflow-y: auto;"></div>
+        </div>
+
+        <!-- Order History -->
+        <div class="card" style="padding: 1rem;">
+            <h2 style="font-size: 0.95rem; font-weight: 600; margin: 0 0 0.75rem;">📋 Order History</h2>
+            <div id="orderHistory" style="max-height: 320px; overflow-y: auto;">
+                <div style="color: var(--text-muted); font-size: 0.82rem; padding: 2rem; text-align: center;">
+                    Loading orders...
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Fourth Row: Alerts + Analyst + Disclosures -->
+    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem;">
+        <!-- Alerts -->
+        <div class="card" style="padding: 1rem;">
+            <h2 style="font-size: 0.95rem; font-weight: 600; margin: 0 0 0.75rem;">🔔 Alerts</h2>
+            <div id="alertsPanel" style="max-height: 220px; overflow-y: auto;">
+                <div style="color: var(--text-muted); font-size: 0.82rem; text-align: center;">No active alerts</div>
+            </div>
+        </div>
+
+        <!-- Analyst -->
+        <div class="card" style="padding: 1rem;">
+            <h2 style="font-size: 0.95rem; font-weight: 600; margin: 0 0 0.75rem;">📊 Company Analyst</h2>
+            <div style="display: flex; gap: 0.4rem; margin-bottom: 0.5rem;">
+                <input type="text" id="analystSymbol" placeholder="Symbol" class="search-input" style="flex: 1; padding: 0.4rem;">
+                <button onclick="getAnalysis()" class="btn-secondary" style="padding: 0.4rem 0.75rem; font-size: 0.72rem;">Analyze</button>
+            </div>
+            <div id="analystResult" style="max-height: 180px; overflow-y: auto; font-size: 0.78rem;"></div>
+        </div>
+
+        <!-- Disclosures -->
+        <div class="card" style="padding: 1rem;">
+            <h2 style="font-size: 0.95rem; font-weight: 600; margin: 0 0 0.75rem;">🏛️ Insider Disclosures</h2>
+            <div id="disclosurePanel" style="max-height: 220px; overflow-y: auto;">
+                <div style="color: var(--text-muted); font-size: 0.82rem; text-align: center;">Search a symbol for insider data</div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+const DT_API = '/daytrading/api';
+
+// Utility
+function fmt(n, d=2) { return n != null ? '₹' + Number(n).toLocaleString('en-IN', {minimumFractionDigits: d, maximumFractionDigits: d}) : '—'; }
+function pnlColor(v) { return v > 0 ? '#10b981' : v < 0 ? '#ef4444' : '#94a3b8'; }
+
+// Load dashboard data
+async function loadDashboard() {
+    try {
+        const resp = await fetch(DT_API + '/dashboard/');
+        const data = await resp.json();
+
+        // Market status
+        const ms = data.market_status;
+        const badge = document.getElementById('marketStatusBadge');
+        if (ms.is_market_open) {
+            badge.textContent = '🟢 MARKET OPEN';
+            badge.style.background = 'rgba(16,185,129,0.15)'; badge.style.color = '#10b981';
+        } else {
+            badge.textContent = '🔴 MARKET CLOSED';
+            badge.style.background = 'rgba(239,68,68,0.15)'; badge.style.color = '#ef4444';
+        }
+
+        // P&L
+        const pnl = data.pnl_summary || {};
+        document.getElementById('availCash').textContent = fmt(data.budget?.available_cash);
+        document.getElementById('realizedPnl').textContent = fmt(pnl.realized_pnl);
+        document.getElementById('realizedPnl').style.color = pnlColor(pnl.realized_pnl);
+        document.getElementById('unrealizedPnl').textContent = fmt(pnl.unrealized_pnl);
+        document.getElementById('unrealizedPnl').style.color = pnlColor(pnl.unrealized_pnl);
+        document.getElementById('totalCharges').textContent = fmt(pnl.total_charges);
+        const w = pnl.winners || 0, l = pnl.losers || 0;
+        document.getElementById('winRate').textContent = (w + l) > 0 ? Math.round(w / (w + l) * 100) + '%' : '—%';
+        document.getElementById('openPosCount').textContent = pnl.open_positions || 0;
+
+        // Positions
+        renderPositions(data.open_positions || []);
+
+        // News
+        renderNews(data.recent_news || []);
+
+        // Alerts
+        renderAlerts(data.active_alerts || []);
+    } catch (e) { console.error('Dashboard load error:', e); }
+}
+
+function renderPositions(positions) {
+    const el = document.getElementById('positionsTable');
+    if (!positions.length) { el.innerHTML = '<div style="color:var(--text-muted);font-size:0.82rem;padding:2rem;text-align:center;">No open positions</div>'; return; }
+    let html = '<table style="width:100%;font-size:0.78rem;"><thead><tr style="color:var(--text-muted);"><th>Symbol</th><th>Qty</th><th>Entry</th><th>CMP</th><th>P&L</th></tr></thead><tbody>';
+    positions.forEach(p => {
+        const pnlVal = p.unrealized_pnl;
+        html += `<tr><td style="font-weight:600;">${p.symbol}</td><td>${p.quantity}</td><td>${fmt(p.avg_entry)}</td><td>${fmt(p.current_price)}</td><td style="color:${pnlColor(pnlVal)};font-weight:600;">${fmt(pnlVal)}</td></tr>`;
+    });
+    html += '</tbody></table>';
+    el.innerHTML = html;
+}
+
+function renderNews(items) {
+    const el = document.getElementById('newsPanel');
+    if (!items.length) { el.innerHTML = '<div style="color:var(--text-muted);font-size:0.82rem;padding:2rem;text-align:center;">No news available</div>'; return; }
+    let html = '';
+    items.forEach(n => {
+        const sColor = n.sentiment === 'POSITIVE' ? '#10b981' : n.sentiment === 'NEGATIVE' ? '#ef4444' : '#94a3b8';
+        html += `<div style="padding:0.5rem 0;border-bottom:1px solid var(--border-color);"><a href="${n.url || '#'}" target="_blank" style="font-size:0.78rem;color:#e2e8f0;text-decoration:none;">${n.headline}</a><div style="font-size:0.68rem;color:var(--text-muted);margin-top:0.2rem;"><span style="color:${sColor};font-weight:600;">${n.sentiment}</span> • ${n.source}</div></div>`;
+    });
+    el.innerHTML = html;
+}
+
+function renderAlerts(items) {
+    const el = document.getElementById('alertsPanel');
+    if (!items.length) { el.innerHTML = '<div style="color:var(--text-muted);font-size:0.82rem;text-align:center;">No active alerts</div>'; return; }
+    let html = '';
+    items.forEach(a => {
+        html += `<div style="padding:0.4rem 0;border-bottom:1px solid var(--border-color);font-size:0.78rem;"><span style="font-weight:600;">${a.symbol}</span> — ${a.condition}</div>`;
+    });
+    el.innerHTML = html;
+}
+
+// Scanner
+async function runScan(type) {
+    const el = document.getElementById('scanResults');
+    el.innerHTML = '<div style="color:var(--text-muted);padding:1rem;text-align:center;">🔄 Scanning...</div>';
+    try {
+        const resp = await fetch(`${DT_API}/scan/?type=${type}`);
+        const data = await resp.json();
+        const results = data.results || data.momentum || data.breakouts || data.volume_spikes || [];
+        if (!results.length) { el.innerHTML = '<div style="color:var(--text-muted);padding:1rem;text-align:center;">No results found</div>'; return; }
+        let html = '<table style="width:100%;font-size:0.75rem;"><thead><tr style="color:var(--text-muted);"><th>Symbol</th><th>Score</th><th>Price</th><th>Vol Ratio</th><th>Chg%</th><th></th></tr></thead><tbody>';
+        results.forEach(r => {
+            html += `<tr><td style="font-weight:600;">${r.clean_symbol || r.symbol}</td><td style="color:#3b82f6;">${r.score?.toFixed(1)}</td><td>${fmt(r.price)}</td><td>${r.volume_ratio?.toFixed(1)}x</td><td style="color:${pnlColor(r.change_pct)};">${r.change_pct?.toFixed(2)}%</td><td><button onclick="document.getElementById('tradeSymbol').value='${r.clean_symbol || r.symbol}'" style="font-size:0.65rem;padding:0.15rem 0.4rem;cursor:pointer;background:var(--border-color);border:none;color:#fff;border-radius:4px;">Trade</button></td></tr>`;
+        });
+        html += '</tbody></table>';
+        el.innerHTML = html;
+    } catch (e) { el.innerHTML = `<div style="color:#ef4444;padding:1rem;">Error: ${e.message}</div>`; }
+}
+
+// Paper Order
+async function submitPaperOrder() {
+    const el = document.getElementById('tradeResult');
+    const symbol = document.getElementById('tradeSymbol').value.trim();
+    if (!symbol) { el.innerHTML = '<span style="color:#ef4444;">Enter a symbol</span>'; return; }
+    el.innerHTML = '<span style="color:var(--text-muted);">Submitting...</span>';
+    try {
+        const resp = await fetch(DT_API + '/order/', {
+            method: 'POST', headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken')},
+            body: JSON.stringify({
+                symbol: symbol, side: document.getElementById('tradeSide').value,
+                quantity: parseInt(document.getElementById('tradeQty').value),
+                order_type: 'MARKET', product: 'MIS',
+                exchange: document.getElementById('tradeExchange').value,
+            }),
+        });
+        const data = await resp.json();
+        const color = data.status === 'FILLED' ? '#10b981' : data.status === 'REJECTED' ? '#ef4444' : '#f59e0b';
+        el.innerHTML = `<span style="color:${color};font-weight:600;">[PAPER] ${data.status}</span> ${data.fill_price ? '@ ₹' + data.fill_price.toFixed(2) : ''} ${data.reasons ? data.reasons.join(', ') : ''}`;
+        loadDashboard();
+    } catch (e) { el.innerHTML = `<span style="color:#ef4444;">Error: ${e.message}</span>`; }
+}
+
+// Entry Signal
+async function getEntrySignal() {
+    const symbol = document.getElementById('tradeSymbol').value.trim();
+    const el = document.getElementById('tradeResult');
+    if (!symbol) { el.innerHTML = '<span style="color:#ef4444;">Enter a symbol</span>'; return; }
+    el.innerHTML = '<span style="color:var(--text-muted);">Analyzing...</span>';
+    try {
+        const resp = await fetch(`${DT_API}/entry-signal/?symbol=${symbol}`);
+        const data = await resp.json();
+        if (data.signal) {
+            el.innerHTML = `<div style="padding:0.5rem;background:rgba(16,185,129,0.1);border-radius:6px;border:1px solid rgba(16,185,129,0.3);"><span style="color:#10b981;font-weight:700;">${data.direction} ${data.strategy}</span><br>Entry: ₹${data.entry_price} | SL: ₹${data.stop_loss} | T1: ₹${data.target_1}<br>R:R ${data.risk_reward} | Strength: ${data.strength}</div>`;
+        } else {
+            el.innerHTML = `<span style="color:#f59e0b;">No signal: ${data.reason}</span>`;
+        }
+    } catch (e) { el.innerHTML = `<span style="color:#ef4444;">Error: ${e.message}</span>`; }
+}
+
+// Flatten All
+async function flattenAll() {
+    if (!confirm('[PAPER] Flatten all open positions?')) return;
+    try {
+        await fetch(DT_API + '/flatten/', {method: 'POST', headers: {'X-CSRFToken': getCookie('csrftoken')}});
+        loadDashboard();
+    } catch (e) { console.error(e); }
+}
+
+// News
+async function refreshNews() {
+    const el = document.getElementById('newsPanel');
+    el.innerHTML = '<div style="color:var(--text-muted);padding:1rem;text-align:center;">🔄 Fetching...</div>';
+    try {
+        const resp = await fetch(`${DT_API}/news/?refresh=true`);
+        const data = await resp.json();
+        renderNews(data.news || []);
+    } catch (e) { el.innerHTML = `<div style="color:#ef4444;">Error: ${e.message}</div>`; }
+}
+
+// Backtest
+async function runBacktest() {
+    const el = document.getElementById('backtestResult');
+    const symbol = document.getElementById('btSymbol').value.trim();
+    if (!symbol) { el.innerHTML = '<span style="color:#ef4444;">Enter a symbol</span>'; return; }
+    el.innerHTML = '<div style="color:var(--text-muted);">🔄 Running backtest (may take a moment)...</div>';
+    try {
+        const resp = await fetch(DT_API + '/backtest/', {
+            method: 'POST', headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken')},
+            body: JSON.stringify({
+                symbol: symbol, strategy: document.getElementById('btStrategy').value,
+                lookback_days: parseInt(document.getElementById('btDays').value),
+            }),
+        });
+        const data = await resp.json();
+        if (data.summary) {
+            const s = data.summary;
+            const mc = data.monte_carlo || {};
+            el.innerHTML = `<div style="padding:0.5rem;background:rgba(59,130,246,0.1);border-radius:6px;border:1px solid rgba(59,130,246,0.3);font-size:0.78rem;"><strong>${symbol} ORB Backtest</strong><br>Trades: ${s.total_trades} | Win Rate: ${s.win_rate}%<br>Winners: ${s.winners} | Losers: ${s.losers}<br>Avg Win: ₹${s.avg_win?.toFixed(2)} | Avg Loss: ₹${s.avg_loss?.toFixed(2)}<br>Profit Factor: ${s.profit_factor?.toFixed(2)}<br>${mc.probability_profit ? `Monte Carlo: ${mc.probability_profit}% chance of profit` : ''}</div>`;
+        } else {
+            el.innerHTML = `<span style="color:#f59e0b;">${data.error || 'No results'}</span>`;
+        }
+    } catch (e) { el.innerHTML = `<span style="color:#ef4444;">Error: ${e.message}</span>`; }
+}
+
+// Analyst
+async function getAnalysis() {
+    const symbol = document.getElementById('analystSymbol').value.trim();
+    const el = document.getElementById('analystResult');
+    if (!symbol) { el.innerHTML = '<span style="color:#ef4444;">Enter a symbol</span>'; return; }
+    el.innerHTML = '<span style="color:var(--text-muted);">Loading...</span>';
+    try {
+        const resp = await fetch(`${DT_API}/analyst/?symbol=${symbol}`);
+        const data = await resp.json();
+        const o = data.overview || {};
+        el.innerHTML = `<div style="font-size:0.75rem;"><strong>${o.name || symbol}</strong><br>Sector: ${o.sector || '—'} | MCap: ${o.market_cap_formatted || '—'}<br>PE: ${o.pe_ratio || '—'} | PB: ${o.pb_ratio || '—'}<br>ROE: ${data.ratios?.roe || '—'}% | ROCE: ${data.ratios?.roce || '—'}%<br>D/E: ${data.ratios?.debt_to_equity || '—'}</div>`;
+    } catch (e) { el.innerHTML = `<span style="color:#ef4444;">Error: ${e.message}</span>`; }
+}
+
+// Load orders
+async function loadOrders() {
+    const el = document.getElementById('orderHistory');
+    try {
+        const resp = await fetch(DT_API + '/orders/');
+        const data = await resp.json();
+        const orders = data.orders || [];
+        if (!orders.length) { el.innerHTML = '<div style="color:var(--text-muted);font-size:0.82rem;padding:2rem;text-align:center;">No orders yet</div>'; return; }
+        let html = '<table style="width:100%;font-size:0.72rem;"><thead><tr style="color:var(--text-muted);"><th>Symbol</th><th>Side</th><th>Qty</th><th>Fill</th><th>Status</th></tr></thead><tbody>';
+        orders.slice(0, 20).forEach(o => {
+            const sc = o.side === 'BUY' ? '#10b981' : '#ef4444';
+            const stc = o.status === 'FILLED' ? '#10b981' : o.status === 'REJECTED' ? '#ef4444' : '#f59e0b';
+            html += `<tr><td>${o.symbol}</td><td style="color:${sc};font-weight:600;">${o.side}</td><td>${o.quantity}</td><td>${o.avg_fill_price ? '₹' + parseFloat(o.avg_fill_price).toFixed(2) : '—'}</td><td style="color:${stc};">${o.status}</td></tr>`;
+        });
+        html += '</tbody></table>';
+        el.innerHTML = html;
+    } catch (e) { el.innerHTML = `<div style="color:#ef4444;">Error loading orders</div>`; }
+}
+
+function getCookie(name) {
+    let v = null;
+    document.cookie.split(';').forEach(c => {
+        c = c.trim();
+        if (c.startsWith(name + '=')) v = c.substring(name.length + 1);
+    });
+    return v;
+}
+
+// Initialize
+document.addEventListener('DOMContentLoaded', () => {
+    loadDashboard();
+    loadOrders();
+    setInterval(loadDashboard, 30000);
+});
+</script>
+{% endblock %}

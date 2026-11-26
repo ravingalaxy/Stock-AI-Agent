@@ -93,6 +93,12 @@
                     <span class="nav-icon">🖥️</span>
                     <span>CLI &amp; Batch Analysis</span>
                 </a>
+
+                <div class="nav-category">Day Trading</div>
+                <a href="{% url 'daytrading:dashboard' %}" class="nav-link {% if request.resolver_match.app_name == 'daytrading' %}active{% endif %}">
+                    <span class="nav-icon">⚡</span>
+                    <span>Day Trading</span>
+                </a>
 <!--
                 <div class="nav-category">Developer API &amp; Admin</div>
                 <a href="/api/v1/" class="nav-link" target="_blank">

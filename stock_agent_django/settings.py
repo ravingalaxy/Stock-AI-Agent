@@ -52,6 +52,7 @@ INSTALLED_APPS = [
     'apps.portfolio',
     'apps.ipo',
     'apps.api',
+    'apps.daytrading',
 ]
 
 MIDDLEWARE = [
