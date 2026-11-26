@@ -16,10 +16,11 @@ from rest_framework import status
 from .services import (
     orchestrator, scanner, news, entry, exit_planner,
     risk, budget, alerts, timemachine, analyst,
-    disclosure, paper_broker, market_calendar,
+    disclosure, paper_broker, market_calendar, ai_advisor,
 )
 from .serializers import (
     SubmitOrderSerializer, CreateAlertSerializer, BacktestRequestSerializer,
+    TradeJournalSerializer,
 )
 
 logger = logging.getLogger(__name__)
@@ -373,4 +374,53 @@ def api_reset_account(request):
         result = budget.reset_paper_account(capital)
         return Response(result)
     except Exception as e:
+        return Response({"error": str(e)}, status=500)
+
+
+# ---------------------------------------------------------------------------
+# API: Trade Journal
+# ---------------------------------------------------------------------------
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def api_trade_journal(request):
+    """Get trade journal entries."""
+    from apps.daytrading.models import TradeJournalEntry
+    try:
+        symbol = request.GET.get("symbol")
+        qs = TradeJournalEntry.objects.all().order_by("-created_at")
+        if symbol:
+            qs = qs.filter(symbol__icontains=symbol)
+        serializer = TradeJournalSerializer(qs[:50], many=True)
+        return Response({"journal": serializer.data})
+    except Exception as e:
+        return Response({"error": str(e)}, status=500)
+
+
+# ---------------------------------------------------------------------------
+# API: FreeLLMAPI AI Advisor / Qualitative Explanations
+# ---------------------------------------------------------------------------
+@api_view(["POST"])
+@permission_classes([AllowAny])
+def api_ai_explain(request):
+    """Generate qualitative AI explanation via FreeLLMAPI."""
+    try:
+        explain_type = request.data.get("type", "signal")
+        data = request.data.get("data", {})
+
+        if explain_type == "signal":
+            result = ai_advisor.explain_trade_signal(data)
+        elif explain_type == "news":
+            result = ai_advisor.interpret_news_catalyst(
+                headline=data.get("headline", ""),
+                summary=data.get("summary", ""),
+                symbol=data.get("symbol"),
+            )
+        elif explain_type == "backtest":
+            result = ai_advisor.compare_strategy_performance(data)
+        else:
+            return Response({"error": f"Unknown explanation type '{explain_type}'"}, status=400)
+
+        return Response(result)
+    except Exception as e:
+        logger.error(f"AI explain error: {e}")
         return Response({"error": str(e)}, status=500)

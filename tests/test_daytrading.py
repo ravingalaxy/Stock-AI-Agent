@@ -626,3 +626,127 @@ class TestExistingAppRegression(TestCase):
     def test_existing_analysis_indicators(self):
         from src.analysis.indicators import calculate_all_indicators
         self.assertTrue(callable(calculate_all_indicators))
+
+
+# ---------------------------------------------------------------------------
+# Independent Audit Remediations & Regression Suite
+# ---------------------------------------------------------------------------
+class TestAuditRemediations(TestCase):
+    """Verify fixes for quantitative, risk, indicator, and AI defects."""
+
+    def test_daily_loss_limit_does_not_trigger_on_profit(self):
+        """Verify that positive realized P&L never triggers the daily loss limit."""
+        from apps.daytrading.services.risk import pre_trade_risk_check
+        from apps.daytrading.models import PaperPosition, PaperAccount
+        from apps.daytrading.services.market_calendar import now_ist
+        from decimal import Decimal
+
+        # Create a closed position with a substantial profit today
+        PaperPosition.objects.create(
+            symbol="RELIANCE.NS", exchange="NSE", quantity=0,
+            avg_entry_price=Decimal("2500"), current_price=Decimal("2600"),
+            realized_pnl=Decimal("50000"), is_open=False,
+            closed_at=now_ist()
+        )
+
+        res = pre_trade_risk_check("INFY.NS", "BUY", 10, 1500)
+        # Must pass and not complain about daily loss limit
+        self.assertTrue(res["passed"], f"Risk check failed unexpectedly: {res['issues']}")
+        self.assertNotIn("Daily loss limit hit", " ".join(res["issues"]))
+
+    def test_daily_loss_limit_triggers_on_actual_loss(self):
+        """Verify that negative realized P&L exceeding limit triggers rejection."""
+        from apps.daytrading.services.risk import pre_trade_risk_check
+        from apps.daytrading.models import PaperPosition
+        from apps.daytrading.services.market_calendar import now_ist
+        from decimal import Decimal
+
+        PaperPosition.objects.create(
+            symbol="TCS.NS", exchange="NSE", quantity=0,
+            avg_entry_price=Decimal("3500"), current_price=Decimal("3400"),
+            realized_pnl=Decimal("-25000"), is_open=False,
+            closed_at=now_ist()
+        )
+
+        res = pre_trade_risk_check("INFY.NS", "BUY", 10, 1500)
+        self.assertFalse(res["passed"])
+        self.assertTrue(any("Daily loss limit hit" in issue for issue in res["issues"]))
+
+    def test_vwap_daily_session_reset(self):
+        """Verify VWAP resets daily on multi-day intraday data."""
+        from apps.daytrading.services.indicators import calculate_vwap
+        import pandas as pd
+        import numpy as np
+
+        d1 = pd.date_range("2026-01-05 09:15", periods=5, freq="15min", tz="Asia/Kolkata")
+        d2 = pd.date_range("2026-01-06 09:15", periods=5, freq="15min", tz="Asia/Kolkata")
+        idx = d1.append(d2)
+
+        df = pd.DataFrame({
+            "High": [102]*5 + [202]*5,
+            "Low": [98]*5 + [198]*5,
+            "Close": [100]*5 + [200]*5,
+            "Volume": [1000]*10,
+        }, index=idx)
+
+        vwap = calculate_vwap(df)
+        # On Day 2 at 09:15, VWAP should be 200.0, NOT contaminated by Day 1's 100.0
+        self.assertEqual(round(vwap.iloc[5], 2), 200.0)
+
+    def test_short_target_2_exit_evaluated(self):
+        """Verify exit planner evaluates target_2 for short positions."""
+        from apps.daytrading.services.exit_planner import evaluate_exit
+        from apps.daytrading.models import DayTradePlan
+        from unittest.mock import patch
+        from decimal import Decimal
+
+        plan = DayTradePlan.objects.create(
+            symbol="INFY.NS", exchange="NSE", strategy="ORB", direction="SHORT",
+            status="ACTIVE", entry_price=Decimal("1500"), stop_loss=Decimal("1530"),
+            target_1=Decimal("1460"), target_2=Decimal("1420"), quantity=10
+        )
+
+        with patch("apps.daytrading.services.exit_planner.get_quote") as mock_q:
+            # Current price dropped to target_2
+            mock_q.return_value = {"price": 1415.0}
+            res = evaluate_exit(plan.plan_id)
+            self.assertEqual(res["action"], "EXIT")
+            self.assertEqual(res["type"], "TARGET_2")
+
+    def test_trade_journal_api(self):
+        """Verify trade journal endpoint returns records."""
+        from apps.daytrading.models import TradeJournalEntry
+        from datetime import date
+        from decimal import Decimal
+
+        TradeJournalEntry.objects.create(
+            symbol="RELIANCE.NS", trade_date=date.today(),
+            strategy="ORB", direction="LONG", entry_price=Decimal("2500"),
+            exit_price=Decimal("2550"), quantity=20, pnl_amount=Decimal("1000"),
+            outcome="WIN"
+        )
+        response = self.client.get("/daytrading/api/journal/")
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("journal", response.data)
+        self.assertGreaterEqual(len(response.data["journal"]), 1)
+
+    def test_ai_advisor_fallback_and_api(self):
+        """Verify AI advisor functions reliably in deterministic fallback mode."""
+        from apps.daytrading.services.ai_advisor import explain_trade_signal, interpret_news_catalyst
+
+        signal = {
+            "symbol": "TCS.NS", "clean_symbol": "TCS", "direction": "LONG",
+            "strategy": "ORB", "entry_price": 3500.0, "stop_loss": 3465.0,
+            "target_1": 3570.0, "risk_reward": 2.0, "strength": "STRONG",
+            "description": "Breakout above 15m opening range"
+        }
+        res = explain_trade_signal(signal)
+        self.assertIn("thesis", res)
+        self.assertIn("source", res)
+
+        api_res = self.client.post("/daytrading/api/ai-explain/", {
+            "type": "signal", "data": signal
+        }, content_type="application/json")
+        self.assertEqual(api_res.status_code, 200)
+        self.assertIn("thesis", api_res.data)
+

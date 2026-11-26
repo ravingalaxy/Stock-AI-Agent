@@ -60,4 +60,10 @@ urlpatterns = [
 
     # API: Account
     path('api/reset-account/', views.api_reset_account, name='api_reset_account'),
+
+    # API: Trade Journal
+    path('api/journal/', views.api_trade_journal, name='api_trade_journal'),
+
+    # API: FreeLLMAPI AI Advisor
+    path('api/ai-explain/', views.api_ai_explain, name='api_ai_explain'),
 ]

@@ -51,8 +51,9 @@ def check_alerts():
         elif alert.alert_type == "PRICE_BELOW" and alert.threshold:
             should_trigger = current <= alert.threshold
         elif alert.alert_type == "VOLUME_SPIKE":
-            vol_ratio = quote.get("volume", 0)
-            should_trigger = vol_ratio > 0  # simplified; real check in scanner
+            cur_volume = quote.get("volume", 0)
+            target_vol = float(alert.threshold) if alert.threshold else 500000
+            should_trigger = cur_volume >= target_vol
 
         if should_trigger:
             alert.is_triggered = True

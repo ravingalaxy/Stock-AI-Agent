@@ -49,7 +49,12 @@ def scan_momentum(universe=None, exchange="NSE"):
             vol_ratio = latest["Volume"] / avg_vol if avg_vol > 0 else 0
             score += min(30, vol_ratio * 10)
 
-            day_open = df.iloc[0]["Open"]
+            # Compute day's open from the current trading session (not 5 days ago)
+            if hasattr(df.index, "date"):
+                today_candles = df[df.index.date == df.index[-1].date()]
+                day_open = today_candles.iloc[0]["Open"] if not today_candles.empty else df.iloc[0]["Open"]
+            else:
+                day_open = df.iloc[0]["Open"]
             change_pct = (latest["Close"] - day_open) / day_open * 100 if day_open > 0 else 0
             score += min(25, abs(change_pct) * 5)
 

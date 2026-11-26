@@ -110,17 +110,35 @@ def replay_orb_strategy(symbol, lookback_days=60, or_minutes=15, exchange="NSE",
         if not exit_price:
             exit_price = float(day_df.iloc[-1]["Close"])
 
-        pnl = (exit_price - entry_price) if direction == "LONG" else (entry_price - exit_price)
+        # Position sizing based on capital and risk
+        capital = 100000.0  # standard baseline paper capital ₹1,00,000
+        risk_amount = capital * (risk_pct / 100.0)
+        risk_per_share = abs(entry_price - stop)
+        qty = max(1, int(risk_amount / risk_per_share)) if risk_per_share > 0 else 1
+
+        gross_diff = (exit_price - entry_price) if direction == "LONG" else (entry_price - exit_price)
+        gross_pnl = gross_diff * qty
+
+        # Indian transaction costs (Brokerage, STT, Exchange, GST, Stamp Duty)
+        charges_dict = round_trip_charges(
+            Decimal(str(entry_price)), Decimal(str(exit_price)),
+            qty, "MIS", exchange
+        )
+        total_charges = float(charges_dict["total"])
+        net_pnl = round(gross_pnl - total_charges, 2)
 
         trades.append({
             "date": str(d),
             "direction": direction,
+            "quantity": qty,
             "entry": round(entry_price, 2),
             "exit": round(exit_price, 2),
             "stop": round(stop, 2),
             "target": round(target, 2),
-            "pnl": round(pnl, 2),
-            "pnl_pct": round(pnl / entry_price * 100, 2) if entry_price else 0,
+            "gross_pnl": round(gross_pnl, 2),
+            "charges": total_charges,
+            "pnl": net_pnl,  # Net PnL after Indian charges
+            "pnl_pct": round(net_pnl / (entry_price * qty) * 100, 2) if entry_price and qty else 0,
             "exit_reason": exit_reason,
         })
 
@@ -131,6 +149,7 @@ def replay_orb_strategy(symbol, lookback_days=60, or_minutes=15, exchange="NSE",
     winners = [t for t in trades if t["pnl"] > 0]
     losers = [t for t in trades if t["pnl"] <= 0]
     total_pnl = sum(t["pnl"] for t in trades)
+    total_charges_sum = sum(t["charges"] for t in trades)
     gross_profit = sum(t["pnl"] for t in winners) if winners else 0
     gross_loss = abs(sum(t["pnl"] for t in losers)) if losers else 0
 
@@ -145,6 +164,7 @@ def replay_orb_strategy(symbol, lookback_days=60, or_minutes=15, exchange="NSE",
             "losers": len(losers),
             "win_rate": round(len(winners) / len(trades) * 100, 1),
             "total_pnl": round(total_pnl, 2),
+            "total_charges": round(total_charges_sum, 2),
             "avg_win": round(sum(t["pnl"] for t in winners) / len(winners), 2) if winners else 0,
             "avg_loss": round(sum(t["pnl"] for t in losers) / len(losers), 2) if losers else 0,
             "profit_factor": round(gross_profit / gross_loss, 2) if gross_loss > 0 else float("inf"),
@@ -230,9 +250,9 @@ def run_backtest_and_save(symbol, strategy="ORB", lookback_days=60, exchange="NS
         winners=result["summary"]["winners"],
         losers=result["summary"]["losers"],
         win_rate=result["summary"]["win_rate"],
-        total_return_pct=result["summary"].get("total_pnl", 0),
-        avg_win_pct=result["summary"].get("avg_win", 0),
-        avg_loss_pct=result["summary"].get("avg_loss", 0),
+        total_return_pct=round((result["summary"].get("total_pnl", 0) / 100000.0) * 100, 2),
+        avg_win_pct=round((result["summary"].get("avg_win", 0) / 100000.0) * 100, 2),
+        avg_loss_pct=round((result["summary"].get("avg_loss", 0) / 100000.0) * 100, 2),
         profit_factor=result["summary"].get("profit_factor", 0),
         trades_json=result["trades"],
         monte_carlo=mc,

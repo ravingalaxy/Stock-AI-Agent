@@ -107,13 +107,15 @@ def evaluate_exit(plan_id):
     if plan.direction == "LONG":
         if stop and current <= stop:
             return {"action": "EXIT", "reason": "Stop-loss hit", "exit_price": float(current), "type": "STOP_LOSS"}
-        if t1 and current >= t1:
-            return {"action": "PARTIAL_EXIT", "reason": "Target 1 hit", "exit_price": float(current), "type": "TARGET_1"}
         if t2 and current >= t2:
             return {"action": "EXIT", "reason": "Target 2 hit", "exit_price": float(current), "type": "TARGET_2"}
+        if t1 and current >= t1:
+            return {"action": "PARTIAL_EXIT", "reason": "Target 1 hit", "exit_price": float(current), "type": "TARGET_1"}
     else:
         if stop and current >= stop:
             return {"action": "EXIT", "reason": "Stop-loss hit", "exit_price": float(current), "type": "STOP_LOSS"}
+        if t2 and current <= t2:
+            return {"action": "EXIT", "reason": "Target 2 hit", "exit_price": float(current), "type": "TARGET_2"}
         if t1 and current <= t1:
             return {"action": "PARTIAL_EXIT", "reason": "Target 1 hit", "exit_price": float(current), "type": "TARGET_1"}
 

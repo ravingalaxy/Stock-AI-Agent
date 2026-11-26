@@ -15,6 +15,9 @@ def get_budget_summary():
     """Get complete budget/capital summary."""
     account = get_or_create_account()
     positions = PaperPosition.objects.filter(is_open=True)
+    closed = PaperPosition.objects.filter(is_open=False)
+    total_realized = sum(float(p.realized_pnl) for p in closed)
+
     used_capital = sum(
         float(p.avg_entry_price * abs(p.quantity)) for p in positions
     )
@@ -26,7 +29,7 @@ def get_budget_summary():
         "used_margin": float(account.used_margin),
         "used_capital": round(used_capital, 2),
         "unrealized_pnl": round(unrealized, 2),
-        "realized_pnl": float(account.realized_pnl),
+        "realized_pnl": round(total_realized, 2),
         "total_charges": float(account.total_charges),
         "net_equity": round(float(account.available_cash) + used_capital + unrealized, 2),
         "open_positions": positions.count(),

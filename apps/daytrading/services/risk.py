@@ -52,17 +52,14 @@ def pre_trade_risk_check(symbol, side, quantity, price, stop_loss=None,
     if open_count >= account.max_open_positions:
         issues.append(f"Max open positions reached ({account.max_open_positions})")
 
-    # 5. Daily loss limit
+    # 5. Daily loss limit: only triggered if NET REALIZED P&L is negative and exceeds limit
     today = now_ist().date()
-    today_orders = PaperOrder.objects.filter(
-        created_at__date=today, status="FILLED"
-    )
     daily_realized = sum(
         float(pos.realized_pnl)
         for pos in PaperPosition.objects.filter(closed_at__date=today, is_open=False)
     )
-    if abs(daily_realized) >= float(account.daily_loss_limit):
-        issues.append(f"Daily loss limit hit: {daily_realized:.2f} vs limit {account.daily_loss_limit}")
+    if daily_realized <= -float(account.daily_loss_limit):
+        issues.append(f"Daily loss limit hit: ₹{abs(daily_realized):.2f} loss vs limit ₹{account.daily_loss_limit}")
 
     # 6. Stop-loss required
     if not stop_loss:

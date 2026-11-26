@@ -13,22 +13,41 @@ from src.utils.helpers import safe_divide
 
 
 def calculate_vwap(df):
-    """Calculate Volume-Weighted Average Price."""
+    """Calculate Volume-Weighted Average Price with intraday daily session reset."""
     if df is None or df.empty or "Volume" not in df.columns:
         return pd.Series(dtype=float)
     typical_price = (df["High"] + df["Low"] + df["Close"]) / 3
-    cum_tp_vol = (typical_price * df["Volume"]).cumsum()
-    cum_vol = df["Volume"].cumsum()
+    tp_vol = typical_price * df["Volume"]
+
+    if hasattr(df.index, "date"):
+        dates = df.index.date
+        cum_tp_vol = tp_vol.groupby(dates).cumsum()
+        cum_vol = df["Volume"].groupby(dates).cumsum()
+    else:
+        cum_tp_vol = tp_vol.cumsum()
+        cum_vol = df["Volume"].cumsum()
+
     return cum_tp_vol / cum_vol.replace(0, np.nan)
 
 
 def calculate_opening_range(df, minutes=15):
-    """Calculate Opening Range (first N minutes). NSE opens at 09:15 IST."""
+    """Calculate Opening Range (first N minutes) for current session. NSE opens at 09:15 IST."""
     if df is None or df.empty:
         return None
-    first_ts = df.index[0]
+
+    # Focus on the relevant trading session (latest date in df)
+    if hasattr(df.index, "date"):
+        latest_date = df.index[-1].date()
+        session_df = df[df.index.date == latest_date]
+    else:
+        session_df = df
+
+    if session_df.empty:
+        return None
+
+    first_ts = session_df.index[0]
     cutoff = first_ts + pd.Timedelta(minutes=minutes)
-    or_data = df[df.index < cutoff]
+    or_data = session_df[session_df.index < cutoff]
     if or_data.empty:
         return None
     or_high = float(or_data["High"].max())

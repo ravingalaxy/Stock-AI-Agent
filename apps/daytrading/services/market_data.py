@@ -75,7 +75,7 @@ def get_intraday_candles(symbol, interval="5m", period="1d", exchange="NSE"):
             df.index = df.index.tz_convert(IST)
         df = df[df["Volume"] > 0].copy()
         df = df[~df.index.duplicated(keep="first")]
-        df.sort_index(inplace=True)
+        df = df.sort_index()
         return df
     except Exception as e:
         logger.error(f"Intraday fetch failed for {sym} {interval}: {e}")
@@ -92,7 +92,7 @@ def get_daily_history(symbol, period="1y", exchange="NSE"):
         if isinstance(df.columns, pd.MultiIndex):
             df.columns = df.columns.get_level_values(0)
         df = df[~df.index.duplicated(keep="first")]
-        df.sort_index(inplace=True)
+        df = df.sort_index()
         return df
     except Exception as e:
         logger.error(f"Daily history fetch failed for {sym}: {e}")

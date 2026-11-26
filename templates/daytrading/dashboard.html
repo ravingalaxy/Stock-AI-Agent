@@ -202,9 +202,13 @@
 
         <!-- Disclosures -->
         <div class="card" style="padding: 1rem;">
-            <h2 style="font-size: 0.95rem; font-weight: 600; margin: 0 0 0.75rem;">🏛️ Insider Disclosures</h2>
-            <div id="disclosurePanel" style="max-height: 220px; overflow-y: auto;">
-                <div style="color: var(--text-muted); font-size: 0.82rem; text-align: center;">Search a symbol for insider data</div>
+            <h2 style="font-size: 0.95rem; font-weight: 600; margin: 0 0 0.75rem;">🏛️ SEBI / Insider Disclosures</h2>
+            <div style="display: flex; gap: 0.4rem; margin-bottom: 0.5rem;">
+                <input type="text" id="disclosureSymbol" placeholder="e.g. RELIANCE" class="search-input" style="flex: 1; padding: 0.4rem;">
+                <button onclick="loadDisclosures()" class="btn-secondary" style="padding: 0.4rem 0.75rem; font-size: 0.72rem;">Load</button>
+            </div>
+            <div id="disclosurePanel" style="max-height: 180px; overflow-y: auto; font-size: 0.78rem;">
+                <div style="color: var(--text-muted); padding: 1rem; text-align: center;">Enter symbol or click Load for recent filings</div>
             </div>
         </div>
     </div>
@@ -343,7 +347,8 @@ async function getEntrySignal() {
         const resp = await fetch(`${DT_API}/entry-signal/?symbol=${symbol}`);
         const data = await resp.json();
         if (data.signal) {
-            el.innerHTML = `<div style="padding:0.5rem;background:rgba(16,185,129,0.1);border-radius:6px;border:1px solid rgba(16,185,129,0.3);"><span style="color:#10b981;font-weight:700;">${data.direction} ${data.strategy}</span><br>Entry: ₹${data.entry_price} | SL: ₹${data.stop_loss} | T1: ₹${data.target_1}<br>R:R ${data.risk_reward} | Strength: ${data.strength}</div>`;
+            window._lastSignalData = data;
+            el.innerHTML = `<div style="padding:0.5rem;background:rgba(16,185,129,0.1);border-radius:6px;border:1px solid rgba(16,185,129,0.3);"><span style="color:#10b981;font-weight:700;">${data.direction} ${data.strategy}</span><br>Entry: ₹${data.entry_price} | SL: ₹${data.stop_loss} | T1: ₹${data.target_1}<br>R:R ${data.risk_reward} | Strength: ${data.strength}<div style="margin-top:0.4rem;"><button onclick="explainSignalWithAI(window._lastSignalData)" style="background:#2563eb;color:#fff;border:none;padding:0.25rem 0.6rem;border-radius:4px;font-size:0.7rem;cursor:pointer;">🤖 Explain with AI</button></div><div id="aiSignalBox"></div></div>`;
         } else {
             el.innerHTML = `<span style="color:#f59e0b;">No signal: ${data.reason}</span>`;
         }
@@ -407,6 +412,50 @@ async function getAnalysis() {
         const o = data.overview || {};
         el.innerHTML = `<div style="font-size:0.75rem;"><strong>${o.name || symbol}</strong><br>Sector: ${o.sector || '—'} | MCap: ${o.market_cap_formatted || '—'}<br>PE: ${o.pe_ratio || '—'} | PB: ${o.pb_ratio || '—'}<br>ROE: ${data.ratios?.roe || '—'}% | ROCE: ${data.ratios?.roce || '—'}%<br>D/E: ${data.ratios?.debt_to_equity || '—'}</div>`;
     } catch (e) { el.innerHTML = `<span style="color:#ef4444;">Error: ${e.message}</span>`; }
+}
+
+// Disclosures
+async function loadDisclosures() {
+    const symbol = document.getElementById('disclosureSymbol').value.trim();
+    const el = document.getElementById('disclosurePanel');
+    el.innerHTML = '<div style="color:var(--text-muted);padding:1rem;text-align:center;">🔄 Loading disclosures...</div>';
+    try {
+        const url = symbol ? `${DT_API}/disclosures/?symbol=${encodeURIComponent(symbol)}` : `${DT_API}/disclosures/`;
+        const resp = await fetch(url);
+        const data = await resp.json();
+        const list = data.disclosures || [];
+        if (!list.length) {
+            el.innerHTML = '<div style="color:var(--text-muted);padding:1rem;text-align:center;">No disclosures found</div>';
+            return;
+        }
+        let html = '<table style="width:100%;font-size:0.72rem;"><thead><tr style="color:var(--text-muted);"><th>Symbol</th><th>Filer</th><th>Type</th><th>Qty</th></tr></thead><tbody>';
+        list.slice(0, 15).forEach(d => {
+            const tc = d.transaction_type === 'BUY' ? '#10b981' : '#ef4444';
+            html += `<tr><td>${d.symbol}</td><td>${d.filer_name?.substring(0, 16) || '—'}</td><td style="color:${tc};font-weight:600;">${d.transaction_type}</td><td>${Number(d.quantity).toLocaleString('en-IN')}</td></tr>`;
+        });
+        html += '</tbody></table>';
+        el.innerHTML = html;
+    } catch (e) {
+        el.innerHTML = `<span style="color:#ef4444;">Error: ${e.message}</span>`;
+    }
+}
+
+// AI Qualitative Explanation
+async function explainSignalWithAI(signalData) {
+    const el = document.getElementById('aiSignalBox');
+    if (!el) return;
+    el.innerHTML = '<span style="color:var(--text-muted);">🤖 Generating FreeLLMAPI AI thesis...</span>';
+    try {
+        const resp = await fetch(DT_API + '/ai-explain/', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken')},
+            body: JSON.stringify({type: 'signal', data: signalData}),
+        });
+        const res = await resp.json();
+        el.innerHTML = `<div style="margin-top:0.4rem;padding:0.4rem;background:rgba(59,130,246,0.1);border-radius:4px;font-size:0.72rem;color:#93c5fd;"><strong>🤖 AI Thesis (${res.source}):</strong> ${res.thesis}</div>`;
+    } catch (e) {
+        el.innerHTML = `<span style="color:#ef4444;">AI unavailable: ${e.message}</span>`;
+    }
 }
 
 // Load orders
