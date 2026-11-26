@@ -19,6 +19,7 @@ urlpatterns = [
     path('backtesting/', RedirectView.as_view(url='/backtest/', permanent=True)),
     path('ipo/', include('apps.ipo.urls')),
     path('api/v1/', include('apps.api.urls')),
+    path('daytrading/', include('apps.daytrading.urls')),
 ]
 
 if settings.DEBUG:
