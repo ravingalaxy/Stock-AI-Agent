@@ -21,6 +21,9 @@ urlpatterns = [
     # API: News (Skill 2)
     path('api/news/', views.api_news, name='api_news'),
 
+    # API: Intraday Chart Data
+    path('api/chart/', views.api_intraday_chart, name='api_intraday_chart'),
+
     # API: Entry Signals (Skill 3)
     path('api/entry-signal/', views.api_entry_signal, name='api_entry_signal'),
 

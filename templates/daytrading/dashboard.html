@@ -1,216 +1,511 @@
-{% extends "base.html" %}
+{% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Day Trading Dashboard — StockAgent AI{% endblock %}
+{% block title %}Day Trading & Intraday Intelligence - StockAgent AI (NSE & BSE){% endblock %}
+
+{% block extra_head %}
+<style>
+/* Day Trading Specific Enhancements within FinTech Design System */
+.trade-tab-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    padding: 0.5rem 1rem;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    border-radius: 6px;
+    transition: all 0.15s ease;
+}
+.trade-tab-btn:hover {
+    background: var(--bg-card-hover);
+    color: var(--text-primary);
+}
+.trade-tab-btn.active {
+    background: rgba(59, 130, 246, 0.18);
+    color: #60a5fa;
+    border: 1px solid rgba(59, 130, 246, 0.35);
+}
+.chart-container-box {
+    position: relative;
+    width: 100%;
+    min-height: 260px;
+}
+</style>
+{% endblock %}
 
 {% block content %}
-<div style="padding: 1rem;">
-    <!-- Header -->
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-        <div>
-            <h1 style="font-size: 1.5rem; font-weight: 700; margin: 0; color: #fff;">
-                ⚡ Day Trading & Intraday Intelligence
-            </h1>
-            <p style="font-size: 0.8rem; color: var(--text-muted); margin: 0.25rem 0 0;">
-                NSE & BSE • INR • Paper Trading Only • All 11 Skills Active
-            </p>
-        </div>
+<!-- Executive Header -->
+<div style="margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: flex-end;">
+    <div>
+        <h1 style="font-size: 1.75rem; font-weight: 800; color: #fff; letter-spacing: -0.02em;">
+            ⚡ Day Trading &amp; Intraday Intelligence
+        </h1>
+        <p class="text-secondary" style="font-size: 0.9rem;">
+            Real-time quantitative screening, algorithmic ORB/VWAP setups, and risk-controlled paper execution across NSE &amp; BSE
+        </p>
+    </div>
+    <div style="text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 0.4rem;">
         <div style="display: flex; gap: 0.5rem; align-items: center;">
-            <span id="paperBadge" style="background: #f59e0b; color: #000; padding: 0.3rem 0.75rem; border-radius: 20px; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.5px;">
-                📋 PAPER TRADING
+            <span class="badge" style="background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); font-weight: 700; font-family: var(--font-mono); font-size: 0.72rem; padding: 0.3rem 0.75rem;">
+                📋 PAPER TRADING ONLY
             </span>
-            <span id="marketStatusBadge" style="padding: 0.3rem 0.75rem; border-radius: 20px; font-size: 0.72rem; font-weight: 600;">
-                ⏳ Loading...
+            <span id="marketStatusBadge" class="badge" style="background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); font-weight: 700; font-size: 0.72rem; padding: 0.3rem 0.75rem;">
+                🟢 LIVE MARKET
             </span>
         </div>
+        <span id="currentTimeIst" style="font-size: 0.8rem; color: var(--text-muted); font-family: var(--font-mono);">
+            As of {{ market_status.current_time_ist }}
+        </span>
     </div>
+</div>
 
-    <!-- P&L Summary Bar -->
-    <div id="pnlBar" style="display: grid; grid-template-columns: repeat(6, 1fr); gap: 0.75rem; margin-bottom: 1.5rem;">
-        <div class="card" style="padding: 0.85rem; text-align: center;">
-            <div style="font-size: 0.72rem; color: var(--text-muted);">Available Cash</div>
-            <div id="availCash" class="font-mono" style="font-size: 1.1rem; font-weight: 700; color: #fff;">₹—</div>
+<!-- KPI Metrics Grid (Institutional FactSet / Bloomberg Style) -->
+<div class="kpi-grid">
+    <div class="kpi-card" style="border-top-color: #3b82f6;">
+        <div class="kpi-label">Available Capital (INR)</div>
+        <div id="availCash" class="kpi-value">₹10,00,000.00</div>
+        <div class="kpi-delta text-secondary">
+            <span>Cash Margin for MIS Orders</span>
         </div>
-        <div class="card" style="padding: 0.85rem; text-align: center;">
-            <div style="font-size: 0.72rem; color: var(--text-muted);">Realized P&L</div>
-            <div id="realizedPnl" class="font-mono" style="font-size: 1.1rem; font-weight: 700;">₹—</div>
-        </div>
-        <div class="card" style="padding: 0.85rem; text-align: center;">
-            <div style="font-size: 0.72rem; color: var(--text-muted);">Unrealized P&L</div>
-            <div id="unrealizedPnl" class="font-mono" style="font-size: 1.1rem; font-weight: 700;">₹—</div>
-        </div>
-        <div class="card" style="padding: 0.85rem; text-align: center;">
-            <div style="font-size: 0.72rem; color: var(--text-muted);">Total Charges</div>
-            <div id="totalCharges" class="font-mono" style="font-size: 1.1rem; font-weight: 700; color: #94a3b8;">₹—</div>
-        </div>
-        <div class="card" style="padding: 0.85rem; text-align: center;">
-            <div style="font-size: 0.72rem; color: var(--text-muted);">Win Rate</div>
-            <div id="winRate" class="font-mono" style="font-size: 1.1rem; font-weight: 700; color: #fff;">—%</div>
-        </div>
-        <div class="card" style="padding: 0.85rem; text-align: center;">
-            <div style="font-size: 0.72rem; color: var(--text-muted);">Open Positions</div>
-            <div id="openPosCount" class="font-mono" style="font-size: 1.1rem; font-weight: 700; color: #fff;">—</div>
+        <div style="margin-top: 0.5rem; display: flex; justify-content: space-between; font-size: 0.72rem; color: var(--text-muted); font-family: var(--font-mono);">
+            <span>Limit: ₹10,00,000</span>
+            <span id="netEquityVal">Eq: ₹10,00,000</span>
         </div>
     </div>
 
-    <!-- Main Grid: Scanner + Positions + News -->
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem;">
-        <!-- Scanner & Entry Signals -->
-        <div class="card" style="padding: 1rem;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
-                <h2 style="font-size: 0.95rem; font-weight: 600; margin: 0;">🔍 Scanner & Entry Signals</h2>
-                <div style="display: flex; gap: 0.4rem;">
-                    <button onclick="runScan('momentum')" class="btn-secondary" style="padding: 0.25rem 0.6rem; font-size: 0.72rem;">Momentum</button>
-                    <button onclick="runScan('breakout')" class="btn-secondary" style="padding: 0.25rem 0.6rem; font-size: 0.72rem;">Breakout</button>
-                    <button onclick="runScan('volume')" class="btn-secondary" style="padding: 0.25rem 0.6rem; font-size: 0.72rem;">Volume</button>
-                </div>
-            </div>
-            <div id="scanResults" style="max-height: 320px; overflow-y: auto;">
-                <div style="color: var(--text-muted); font-size: 0.82rem; padding: 2rem; text-align: center;">
-                    Click a scan type to discover opportunities
-                </div>
-            </div>
+    <div class="kpi-card" id="realizedCard" style="border-top-color: #10b981;">
+        <div class="kpi-label">Net Realized P&amp;L</div>
+        <div id="realizedPnl" class="kpi-value text-positive">₹0.00</div>
+        <div id="realizedDelta" class="kpi-delta text-positive">
+            <span>Locked Profit / Loss</span>
         </div>
-
-        <!-- Open Positions -->
-        <div class="card" style="padding: 1rem;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
-                <h2 style="font-size: 0.95rem; font-weight: 600; margin: 0;">💼 Paper Positions</h2>
-                <button onclick="flattenAll()" class="btn-secondary" style="padding: 0.25rem 0.6rem; font-size: 0.72rem; color: #ef4444;">Flatten All</button>
-            </div>
-            <div id="positionsTable" style="max-height: 320px; overflow-y: auto;">
-                <div style="color: var(--text-muted); font-size: 0.82rem; padding: 2rem; text-align: center;">
-                    No open positions
-                </div>
-            </div>
+        <div style="margin-top: 0.5rem; display: flex; justify-content: space-between; font-size: 0.72rem; color: var(--text-muted); font-family: var(--font-mono);">
+            <span id="closedTradesCount">Closed: 0 trades</span>
+            <span id="pnlPercentVal">0.00%</span>
         </div>
     </div>
 
-    <!-- Second Row: Quick Trade + News -->
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem;">
-        <!-- Quick Paper Trade -->
-        <div class="card" style="padding: 1rem;">
-            <h2 style="font-size: 0.95rem; font-weight: 600; margin: 0 0 0.75rem;">📋 Quick Paper Trade</h2>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
-                <div>
-                    <label style="font-size: 0.72rem; color: var(--text-muted);">Symbol</label>
-                    <input type="text" id="tradeSymbol" placeholder="e.g. RELIANCE" class="search-input" style="width: 100%; padding: 0.4rem;">
-                </div>
-                <div>
-                    <label style="font-size: 0.72rem; color: var(--text-muted);">Quantity</label>
-                    <input type="number" id="tradeQty" value="1" min="1" class="search-input" style="width: 100%; padding: 0.4rem;">
-                </div>
-                <div>
-                    <label style="font-size: 0.72rem; color: var(--text-muted);">Side</label>
-                    <select id="tradeSide" class="search-input" style="width: 100%; padding: 0.4rem;">
-                        <option value="BUY">BUY</option>
-                        <option value="SELL">SELL</option>
-                    </select>
-                </div>
-                <div>
-                    <label style="font-size: 0.72rem; color: var(--text-muted);">Exchange</label>
-                    <select id="tradeExchange" class="search-input" style="width: 100%; padding: 0.4rem;">
-                        <option value="NSE">NSE</option>
-                        <option value="BSE">BSE</option>
-                    </select>
-                </div>
+    <div class="kpi-card" id="unrealizedCard" style="border-top-color: #06b6d4;">
+        <div class="kpi-label">Floating Unrealized P&amp;L</div>
+        <div id="unrealizedPnl" class="kpi-value">₹0.00</div>
+        <div class="kpi-delta text-secondary">
+            <span>Open Positions Float</span>
+        </div>
+        <div style="margin-top: 0.5rem; display: flex; justify-content: space-between; font-size: 0.72rem; color: var(--text-muted); font-family: var(--font-mono);">
+            <span id="openPosCount">Positions: 0</span>
+            <span>Max: 5 allowed</span>
+        </div>
+    </div>
+
+    <div class="kpi-card" style="border-top-color: #f59e0b;">
+        <div class="kpi-label">Statutory Charges (INR)</div>
+        <div id="totalCharges" class="kpi-value" style="color: #fbbf24;">₹0.00</div>
+        <div class="kpi-delta text-secondary">
+            <span>STT, Brokerage, GST, Stamp</span>
+        </div>
+        <div style="margin-top: 0.5rem; display: flex; justify-content: space-between; font-size: 0.72rem; color: var(--text-muted); font-family: var(--font-mono);">
+            <span>Brokerage: Max ₹20</span>
+            <span>STT: 0.025% Sell</span>
+        </div>
+    </div>
+
+    <div class="kpi-card" style="border-top-color: #8b5cf6;">
+        <div class="kpi-label">Win Rate &amp; Efficiency</div>
+        <div id="winRateVal" class="kpi-value">0.0%</div>
+        <div id="winLossSplit" class="kpi-delta text-secondary">
+            <span>0 Winners / 0 Losers</span>
+        </div>
+        <div style="margin-top: 0.5rem; display: flex; justify-content: space-between; font-size: 0.72rem; color: var(--text-muted); font-family: var(--font-mono);">
+            <span>Target RR: 2.0+</span>
+            <span id="dailyLossRemaining">Loss Cap: ₹20k</span>
+        </div>
+    </div>
+</div>
+
+<!-- ========================================================================= -->
+<!-- INTERACTIVE GRAPHS & CHARTS SECTION                                       -->
+<!-- ========================================================================= -->
+<div style="display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
+    <!-- Chart 1: Intraday Technical Setup & VWAP Visualizer -->
+    <div class="fin-card" style="margin-bottom: 0;">
+        <div class="fin-card-header">
+            <div class="fin-card-title">
+                <span>📈</span>
+                <span id="activeChartTitle">Intraday Setup &amp; VWAP Visualizer (RELIANCE)</span>
             </div>
-            <div style="display: flex; gap: 0.5rem; margin-top: 0.75rem;">
-                <button onclick="submitPaperOrder()" class="btn-primary" style="flex: 1; padding: 0.5rem; font-size: 0.82rem;">
-                    Submit Paper Order
-                </button>
-                <button onclick="getEntrySignal()" class="btn-secondary" style="padding: 0.5rem; font-size: 0.82rem;">
-                    📊 Get Signal
+            <div style="display: flex; gap: 0.5rem; align-items: center;">
+                <input type="text" id="chartSymbolInput" value="RELIANCE" placeholder="Symbol" class="fin-input" style="width: 120px; padding: 0.25rem 0.5rem; font-size: 0.78rem; text-transform: uppercase;">
+                <select id="chartIntervalSelect" class="fin-select" style="padding: 0.25rem 0.5rem; font-size: 0.78rem;">
+                    <option value="5m">5 Min</option>
+                    <option value="15m">15 Min</option>
+                </select>
+                <button onclick="loadIntradayChart()" class="btn-secondary" style="padding: 0.25rem 0.65rem; font-size: 0.78rem;">
+                    Update Chart
                 </button>
             </div>
-            <div id="tradeResult" style="margin-top: 0.5rem; font-size: 0.78rem;"></div>
         </div>
 
-        <!-- News & Sentiment -->
-        <div class="card" style="padding: 1rem;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
-                <h2 style="font-size: 0.95rem; font-weight: 600; margin: 0;">📰 News & Sentiment</h2>
-                <button onclick="refreshNews()" class="btn-secondary" style="padding: 0.25rem 0.6rem; font-size: 0.72rem;">Refresh</button>
+        <div style="display: flex; gap: 1rem; align-items: center; margin-bottom: 0.75rem; font-size: 0.75rem; font-family: var(--font-mono);">
+            <div style="display: flex; align-items: center; gap: 0.35rem;">
+                <span style="display: inline-block; width: 12px; height: 3px; background: #3b82f6;"></span>
+                <span class="text-secondary">Price (LTP: <strong id="chartLtpDisplay" style="color: #fff;">₹—</strong>)</span>
             </div>
-            <div id="newsPanel" style="max-height: 280px; overflow-y: auto;">
-                <div style="color: var(--text-muted); font-size: 0.82rem; padding: 2rem; text-align: center;">
-                    Loading news...
-                </div>
+            <div style="display: flex; align-items: center; gap: 0.35rem;">
+                <span style="display: inline-block; width: 12px; height: 3px; background: #f59e0b; border-top: 1px dashed #f59e0b;"></span>
+                <span class="text-secondary">VWAP: <strong id="chartVwapDisplay" style="color: #fbbf24;">₹—</strong></span>
             </div>
+            <div id="levelsLegendBox" style="display: none; gap: 1rem; align-items: center;">
+                <span style="color: #60a5fa;">● Entry: <span id="legendEntry">₹0</span></span>
+                <span style="color: #10b981;">▲ T1: <span id="legendTarget">₹0</span></span>
+                <span style="color: #f43f5e;">▼ SL: <span id="legendStop">₹0</span></span>
+            </div>
+        </div>
+
+        <div class="chart-container-box">
+            <canvas id="intradayPriceChart" height="250"></canvas>
         </div>
     </div>
 
-    <!-- Third Row: Backtest + Order History -->
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem;">
-        <!-- Backtest / Time Machine -->
-        <div class="card" style="padding: 1rem;">
-            <h2 style="font-size: 0.95rem; font-weight: 600; margin: 0 0 0.75rem;">🕰️ Time Machine (Backtest)</h2>
-            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.5rem;">
+    <!-- Chart 2: Top Scanned Momentum & Volume Leaders -->
+    <div class="fin-card" style="margin-bottom: 0;">
+        <div class="fin-card-header">
+            <div class="fin-card-title">
+                <span>🔥</span>
+                <span>Volume Spike Multipliers</span>
+            </div>
+            <span class="badge" style="background: rgba(59, 130, 246, 0.15); color: #60a5fa; font-size: 0.72rem;">Vs 20D Avg Vol</span>
+        </div>
+        <p style="font-size: 0.78rem; color: var(--text-secondary); margin-bottom: 0.75rem;">
+            Stocks with unusual institutional volume spikes relative to their 20-day moving averages:
+        </p>
+        <div class="chart-container-box">
+            <canvas id="volumeSpikeBarChart" height="250"></canvas>
+        </div>
+    </div>
+</div>
+
+<!-- ========================================================================= -->
+<!-- MAIN INTERACTIVE WORKSPACE: Scanner + Positions + Order Terminal + News   -->
+<!-- ========================================================================= -->
+<div style="display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
+    <!-- LEFT COLUMN: Scanner & Positions -->
+    <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+        
+        <!-- Scanner & Factor-Ranked Equities -->
+        <div class="fin-card" style="margin-bottom: 0;">
+            <div class="fin-card-header">
+                <div class="fin-card-title">
+                    <span>🏆</span>
+                    <span>Intraday Scanner &amp; Setup Detector</span>
+                </div>
+                <div style="display: flex; gap: 0.35rem; align-items: center;">
+                    <button onclick="runScan('momentum')" id="scanBtnMom" class="trade-tab-btn active">Momentum</button>
+                    <button onclick="runScan('breakout')" id="scanBtnBrk" class="trade-tab-btn">Breakouts</button>
+                    <button onclick="runScan('volume')" id="scanBtnVol" class="trade-tab-btn">Volume Spikes</button>
+                    <button onclick="runScan('full')" id="scanBtnFull" class="trade-tab-btn">Full Scan</button>
+                </div>
+            </div>
+
+            <div class="fin-table-container" style="max-height: 380px; overflow-y: auto;">
+                <table class="fin-table">
+                    <thead>
+                        <tr>
+                            <th>Rank</th>
+                            <th>Symbol</th>
+                            <th>Price (₹)</th>
+                            <th>Day Chg</th>
+                            <th>Vol Ratio</th>
+                            <th>Score</th>
+                            <th>RSI (9)</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="scanResultsBody">
+                        <tr>
+                            <td colspan="8" style="text-align: center; color: var(--text-muted); padding: 3rem;">
+                                🔄 Initializing scanner algorithms...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Open Paper Positions Table -->
+        <div class="fin-card" style="margin-bottom: 0;">
+            <div class="fin-card-header">
+                <div class="fin-card-title">
+                    <span>💼</span>
+                    <span>Open Paper Positions (Live Surveillance)</span>
+                </div>
+                <div style="display: flex; gap: 0.5rem; align-items: center;">
+                    <button onclick="flattenAll()" class="btn-secondary" style="color: #f43f5e; border-color: rgba(244, 63, 94, 0.4); font-size: 0.78rem; padding: 0.3rem 0.75rem;">
+                        🛑 Flatten All Positions
+                    </button>
+                </div>
+            </div>
+
+            <div class="fin-table-container">
+                <table class="fin-table">
+                    <thead>
+                        <tr>
+                            <th>Symbol</th>
+                            <th>Exchange</th>
+                            <th>Side / Qty</th>
+                            <th>Avg Entry</th>
+                            <th>CMP</th>
+                            <th>Unrealized P&amp;L</th>
+                            <th>Charges</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="positionsTableBody">
+                        <tr>
+                            <td colspan="8" style="text-align: center; color: var(--text-muted); padding: 2rem;">
+                                No open positions active in this paper portfolio.
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- RIGHT COLUMN: Order Terminal & Live News -->
+    <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+        
+        <!-- Quantitative Paper Trading Terminal -->
+        <div class="fin-card" style="margin-bottom: 0;">
+            <div class="fin-card-header">
+                <div class="fin-card-title">
+                    <span>⚡</span>
+                    <span>Paper Trading Terminal</span>
+                </div>
+                <span class="badge" style="background: rgba(16, 185, 129, 0.15); color: #10b981; font-size: 0.7rem;">Zero Risk</span>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+                    <div>
+                        <label style="font-size: 0.75rem; color: var(--text-secondary); display: block; margin-bottom: 0.25rem;">Symbol</label>
+                        <input type="text" id="tradeSymbol" placeholder="e.g. RELIANCE" class="fin-input" style="width: 100%; text-transform: uppercase;">
+                    </div>
+                    <div>
+                        <label style="font-size: 0.75rem; color: var(--text-secondary); display: block; margin-bottom: 0.25rem;">Quantity</label>
+                        <input type="number" id="tradeQty" value="10" min="1" class="fin-input" style="width: 100%; font-family: var(--font-mono);">
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+                    <div>
+                        <label style="font-size: 0.75rem; color: var(--text-secondary); display: block; margin-bottom: 0.25rem;">Side</label>
+                        <select id="tradeSide" class="fin-select" style="width: 100%;">
+                            <option value="BUY">BUY (Long)</option>
+                            <option value="SELL">SELL (Short)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="font-size: 0.75rem; color: var(--text-secondary); display: block; margin-bottom: 0.25rem;">Product &amp; Exch</label>
+                        <select id="tradeExchange" class="fin-select" style="width: 100%;">
+                            <option value="NSE">NSE - MIS (Intraday)</option>
+                            <option value="BSE">BSE - MIS (Intraday)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div style="display: flex; gap: 0.5rem; margin-top: 0.25rem;">
+                    <button onclick="submitPaperOrder()" class="btn-primary" style="flex: 1; padding: 0.55rem; font-size: 0.85rem; font-weight: 700;">
+                        🚀 Submit Paper Order
+                    </button>
+                    <button onclick="getEntrySignal()" class="btn-secondary" style="padding: 0.55rem 0.85rem; font-size: 0.82rem;">
+                        📊 Get Signal
+                    </button>
+                </div>
+
+                <!-- Signal & AI Explanation Box -->
+                <div id="signalOutputBox" style="display: none; padding: 0.75rem; background: rgba(15, 23, 42, 0.8); border: 1px solid var(--border-color); border-radius: 8px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
+                        <span id="signalBadge" class="score-badge score-high" style="font-size: 0.75rem;">SIGNAL</span>
+                        <button onclick="explainSignalWithAI(window._lastSignalData)" class="btn-secondary" style="padding: 0.2rem 0.5rem; font-size: 0.7rem; color: #60a5fa;">
+                            🤖 FreeLLMAPI AI Thesis
+                        </button>
+                    </div>
+                    <div id="signalDetailsText" style="font-size: 0.78rem; line-height: 1.5; color: #e2e8f0;"></div>
+                    <div id="aiThesisContainer" style="margin-top: 0.5rem; display: none; padding: 0.5rem; background: rgba(59, 130, 246, 0.1); border-left: 3px solid #3b82f6; border-radius: 4px; font-size: 0.75rem; color: #bfdbfe;"></div>
+                </div>
+
+                <!-- Order Status Feedback -->
+                <div id="orderStatusBox" style="font-size: 0.8rem; min-height: 20px;"></div>
+            </div>
+        </div>
+
+        <!-- Live Indian Market News & Corporate Announcements -->
+        <div class="fin-card" style="margin-bottom: 0;">
+            <div class="fin-card-header">
+                <div class="fin-card-title">
+                    <span>📰</span>
+                    <span>Market News &amp; BSE Filings</span>
+                </div>
+                <button onclick="refreshNews()" class="btn-secondary" style="padding: 0.25rem 0.6rem; font-size: 0.75rem;">
+                    🔄 Refresh
+                </button>
+            </div>
+
+            <div id="newsFeedList" style="max-height: 380px; overflow-y: auto; display: flex; flex-direction: column; gap: 0.5rem;">
+                <div style="color: var(--text-muted); font-size: 0.82rem; padding: 2rem; text-align: center;">
+                    Loading verified Indian news catalysts...
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- ========================================================================= -->
+<!-- LOWER GRID: Quant Backtesting + Active Alerts + SEBI Disclosures          -->
+<!-- ========================================================================= -->
+<div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
+    
+    <!-- Card 1: Quant Backtest & Monte Carlo Replay (Skill 8) -->
+    <div class="fin-card" style="margin-bottom: 0;">
+        <div class="fin-card-header">
+            <div class="fin-card-title">
+                <span>🕰️</span>
+                <span>Time Machine (Backtest)</span>
+            </div>
+            <span class="badge" style="background: rgba(139, 92, 246, 0.15); color: #a78bfa; font-size: 0.7rem;">Monte Carlo</span>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 0.75rem;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.4rem;">
                 <div>
                     <label style="font-size: 0.72rem; color: var(--text-muted);">Symbol</label>
-                    <input type="text" id="btSymbol" placeholder="RELIANCE" class="search-input" style="width: 100%; padding: 0.4rem;">
+                    <input type="text" id="btSymbol" value="RELIANCE" class="fin-input" style="width: 100%; text-transform: uppercase;">
                 </div>
                 <div>
                     <label style="font-size: 0.72rem; color: var(--text-muted);">Strategy</label>
-                    <select id="btStrategy" class="search-input" style="width: 100%; padding: 0.4rem;">
-                        <option value="ORB">ORB</option>
-                        <option value="MOMENTUM">Momentum</option>
-                        <option value="BREAKOUT">Breakout</option>
+                    <select id="btStrategy" class="fin-select" style="width: 100%;">
+                        <option value="ORB">ORB (15m Breakout)</option>
+                        <option value="MOMENTUM">Momentum Burst</option>
+                        <option value="BREAKOUT">Volume Breakout</option>
                     </select>
                 </div>
-                <div>
-                    <label style="font-size: 0.72rem; color: var(--text-muted);">Days</label>
-                    <input type="number" id="btDays" value="60" min="5" max="180" class="search-input" style="width: 100%; padding: 0.4rem;">
-                </div>
             </div>
-            <button onclick="runBacktest()" class="btn-primary" style="width: 100%; margin-top: 0.5rem; padding: 0.5rem; font-size: 0.82rem;">
-                🚀 Run Backtest
+            <div>
+                <label style="font-size: 0.72rem; color: var(--text-muted);">Lookback Window</label>
+                <select id="btDays" class="fin-select" style="width: 100%;">
+                    <option value="30">30 Days (Intraday 5m)</option>
+                    <option value="60" selected>60 Days (Intraday 5m)</option>
+                </select>
+            </div>
+            <button onclick="runBacktest()" class="btn-primary" style="padding: 0.5rem; font-size: 0.8rem; font-weight: 700; margin-top: 0.25rem;">
+                🚀 Execute Quant Replay
             </button>
-            <div id="backtestResult" style="margin-top: 0.5rem; font-size: 0.78rem; max-height: 200px; overflow-y: auto;"></div>
         </div>
 
-        <!-- Order History -->
-        <div class="card" style="padding: 1rem;">
-            <h2 style="font-size: 0.95rem; font-weight: 600; margin: 0 0 0.75rem;">📋 Order History</h2>
-            <div id="orderHistory" style="max-height: 320px; overflow-y: auto;">
-                <div style="color: var(--text-muted); font-size: 0.82rem; padding: 2rem; text-align: center;">
-                    Loading orders...
-                </div>
+        <div id="btResultContainer" style="font-size: 0.78rem;">
+            <div style="color: var(--text-muted); text-align: center; padding: 1.5rem;">
+                Replay historical 5m bars without look-ahead bias and verify statistical edge.
             </div>
         </div>
     </div>
 
-    <!-- Fourth Row: Alerts + Analyst + Disclosures -->
-    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem;">
-        <!-- Alerts -->
-        <div class="card" style="padding: 1rem;">
-            <h2 style="font-size: 0.95rem; font-weight: 600; margin: 0 0 0.75rem;">🔔 Alerts</h2>
-            <div id="alertsPanel" style="max-height: 220px; overflow-y: auto;">
-                <div style="color: var(--text-muted); font-size: 0.82rem; text-align: center;">No active alerts</div>
+    <!-- Card 2: Active Surveillance Alerts (Skill 7) -->
+    <div class="fin-card" style="margin-bottom: 0;">
+        <div class="fin-card-header">
+            <div class="fin-card-title">
+                <span>🔔</span>
+                <span>Surveillance Alerts</span>
             </div>
+            <span class="badge" style="background: rgba(245, 158, 11, 0.15); color: #fbbf24; font-size: 0.7rem;">Real-time</span>
         </div>
 
-        <!-- Analyst -->
-        <div class="card" style="padding: 1rem;">
-            <h2 style="font-size: 0.95rem; font-weight: 600; margin: 0 0 0.75rem;">📊 Company Analyst</h2>
-            <div style="display: flex; gap: 0.4rem; margin-bottom: 0.5rem;">
-                <input type="text" id="analystSymbol" placeholder="Symbol" class="search-input" style="flex: 1; padding: 0.4rem;">
-                <button onclick="getAnalysis()" class="btn-secondary" style="padding: 0.4rem 0.75rem; font-size: 0.72rem;">Analyze</button>
-            </div>
-            <div id="analystResult" style="max-height: 180px; overflow-y: auto; font-size: 0.78rem;"></div>
+        <div style="display: flex; gap: 0.4rem; margin-bottom: 0.75rem;">
+            <input type="text" id="alertSymbol" placeholder="Symbol" class="fin-input" style="flex: 1; text-transform: uppercase; font-size: 0.78rem;">
+            <select id="alertType" class="fin-select" style="font-size: 0.78rem;">
+                <option value="PRICE_ABOVE">Above</option>
+                <option value="PRICE_BELOW">Below</option>
+                <option value="VOLUME_SPIKE">Vol Spike</option>
+            </select>
+            <input type="number" id="alertThreshold" placeholder="₹" class="fin-input" style="width: 80px; font-size: 0.78rem;">
+            <button onclick="createAlert()" class="btn-secondary" style="padding: 0.35rem 0.65rem; font-size: 0.75rem;">
+                + Add
+            </button>
         </div>
 
-        <!-- Disclosures -->
-        <div class="card" style="padding: 1rem;">
-            <h2 style="font-size: 0.95rem; font-weight: 600; margin: 0 0 0.75rem;">🏛️ SEBI / Insider Disclosures</h2>
-            <div style="display: flex; gap: 0.4rem; margin-bottom: 0.5rem;">
-                <input type="text" id="disclosureSymbol" placeholder="e.g. RELIANCE" class="search-input" style="flex: 1; padding: 0.4rem;">
-                <button onclick="loadDisclosures()" class="btn-secondary" style="padding: 0.4rem 0.75rem; font-size: 0.72rem;">Load</button>
-            </div>
-            <div id="disclosurePanel" style="max-height: 180px; overflow-y: auto; font-size: 0.78rem;">
-                <div style="color: var(--text-muted); padding: 1rem; text-align: center;">Enter symbol or click Load for recent filings</div>
+        <div id="activeAlertsList" style="max-height: 240px; overflow-y: auto; display: flex; flex-direction: column; gap: 0.4rem;">
+            <div style="color: var(--text-muted); font-size: 0.78rem; text-align: center; padding: 1.5rem;">
+                No active surveillance alerts set.
             </div>
         </div>
+    </div>
+
+    <!-- Card 3: SEBI Insider Trading & Bulk Deals (Skill 10: Pelosi India) -->
+    <div class="fin-card" style="margin-bottom: 0;">
+        <div class="fin-card-header">
+            <div class="fin-card-title">
+                <span>🏛️</span>
+                <span>SEBI Insider &amp; Bulk Deals</span>
+            </div>
+            <span class="badge" style="background: rgba(16, 185, 129, 0.15); color: #10b981; font-size: 0.7rem;">PIT Regulations</span>
+        </div>
+
+        <div style="display: flex; gap: 0.4rem; margin-bottom: 0.75rem;">
+            <input type="text" id="disclosureSymbol" placeholder="Filter Symbol (e.g. RELIANCE)" class="fin-input" style="flex: 1; text-transform: uppercase; font-size: 0.78rem;">
+            <button onclick="loadDisclosures()" class="btn-secondary" style="padding: 0.35rem 0.65rem; font-size: 0.75rem;">
+                🔍 Query
+            </button>
+        </div>
+
+        <div id="disclosureFeed" style="max-height: 240px; overflow-y: auto;">
+            <div style="color: var(--text-muted); font-size: 0.78rem; text-align: center; padding: 1.5rem;">
+                Query public SEBI promoter and director disclosures.
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- ========================================================================= -->
+<!-- ORDER EXECUTION AUDIT TRAIL                                               -->
+<!-- ========================================================================= -->
+<div class="fin-card">
+    <div class="fin-card-header">
+        <div class="fin-card-title">
+            <span>📋</span>
+            <span>Simulated Paper Order Audit Trail (Skill 11)</span>
+        </div>
+        <button onclick="loadOrders()" class="btn-secondary" style="font-size: 0.75rem; padding: 0.25rem 0.6rem;">
+            🔄 Refresh Log
+        </button>
+    </div>
+
+    <div class="fin-table-container">
+        <table class="fin-table">
+            <thead>
+                <tr>
+                    <th>Order ID</th>
+                    <th>Time (IST)</th>
+                    <th>Symbol</th>
+                    <th>Side</th>
+                    <th>Qty</th>
+                    <th>Type</th>
+                    <th>Avg Fill Price</th>
+                    <th>Status</th>
+                    <th>Security Mode</th>
+                </tr>
+            </thead>
+            <tbody id="orderAuditBody">
+                <tr>
+                    <td colspan="9" style="text-align: center; color: var(--text-muted); padding: 2rem;">
+                        No paper trade executions logged yet.
+                    </td>
+                </tr>
+            </tbody>
+        </table>
     </div>
 </div>
 {% endblock %}
@@ -219,277 +514,756 @@
 <script>
 const DT_API = '/daytrading/api';
 
-// Utility
-function fmt(n, d=2) { return n != null ? '₹' + Number(n).toLocaleString('en-IN', {minimumFractionDigits: d, maximumFractionDigits: d}) : '—'; }
-function pnlColor(v) { return v > 0 ? '#10b981' : v < 0 ? '#ef4444' : '#94a3b8'; }
+// Format currency in Indian Rupees
+function fmtINR(val, decimals = 2) {
+    if (val == null || isNaN(val)) return '—';
+    return '₹' + Number(val).toLocaleString('en-IN', {
+        minimumFractionDigits: decimals,
+        maximumFractionDigits: decimals
+    });
+}
 
-// Load dashboard data
+function pnlClass(val) {
+    return val > 0 ? 'text-positive' : val < 0 ? 'text-negative' : 'text-muted';
+}
+
+function getCsrfToken() {
+    let cookieVal = null;
+    document.cookie.split(';').forEach(cookie => {
+        const c = cookie.trim();
+        if (c.startsWith('csrftoken=')) cookieVal = c.substring(10);
+    });
+    return cookieVal;
+}
+
+// Global Chart References
+let intradayChartInstance = null;
+let volumeBarChartInstance = null;
+
+// =========================================================================
+// 1. CHART INITIALIZATION (Chart.js)
+// =========================================================================
+function initCharts() {
+    const ctxPrice = document.getElementById('intradayPriceChart').getContext('2d');
+    intradayChartInstance = new Chart(ctxPrice, {
+        type: 'line',
+        data: {
+            labels: [],
+            datasets: [
+                {
+                    label: 'Price',
+                    data: [],
+                    borderColor: '#3b82f6',
+                    backgroundColor: 'rgba(59, 130, 246, 0.08)',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.15,
+                    pointRadius: 1,
+                    pointHoverRadius: 4,
+                },
+                {
+                    label: 'VWAP',
+                    data: [],
+                    borderColor: '#f59e0b',
+                    borderWidth: 1.5,
+                    borderDash: [5, 5],
+                    fill: false,
+                    pointRadius: 0,
+                    tension: 0.1,
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    backgroundColor: 'rgba(15, 23, 42, 0.95)',
+                    titleColor: '#fff',
+                    bodyColor: '#e2e8f0',
+                    borderColor: '#334155',
+                    borderWidth: 1,
+                    padding: 8,
+                    displayColors: true,
+                }
+            },
+            scales: {
+                x: {
+                    grid: { color: 'rgba(255, 255, 255, 0.04)' },
+                    ticks: { color: '#64748b', font: { family: "'JetBrains Mono', monospace", size: 10 }, maxTicksLimit: 12 }
+                },
+                y: {
+                    grid: { color: 'rgba(255, 255, 255, 0.04)' },
+                    ticks: {
+                        color: '#94a3b8',
+                        font: { family: "'JetBrains Mono', monospace", size: 10 },
+                        callback: function(v) { return '₹' + v.toFixed(1); }
+                    }
+                }
+            }
+        }
+    });
+
+    const ctxVol = document.getElementById('volumeSpikeBarChart').getContext('2d');
+    volumeBarChartInstance = new Chart(ctxVol, {
+        type: 'bar',
+        data: {
+            labels: [],
+            datasets: [{
+                label: 'Volume Multiplier',
+                data: [],
+                backgroundColor: [],
+                borderRadius: 4,
+                barThickness: 14,
+            }]
+        },
+        options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: function(c) { return c.raw.toFixed(2) + 'x Normal Volume'; }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    grid: { color: 'rgba(255, 255, 255, 0.04)' },
+                    ticks: {
+                        color: '#64748b',
+                        font: { family: "'JetBrains Mono', monospace", size: 9 },
+                        callback: function(v) { return v + 'x'; }
+                    }
+                },
+                y: {
+                    grid: { display: false },
+                    ticks: { color: '#e2e8f0', font: { family: "'JetBrains Mono', monospace", size: 10, weight: 600 } }
+                }
+            }
+        }
+    });
+}
+
+// Load Intraday Chart Data
+async function loadIntradayChart(symbolOverride) {
+    const symbol = symbolOverride || document.getElementById('chartSymbolInput').value.trim() || 'RELIANCE';
+    const interval = document.getElementById('chartIntervalSelect').value;
+    document.getElementById('activeChartTitle').textContent = `Intraday Setup & VWAP Visualizer (${symbol.toUpperCase()})`;
+
+    try {
+        const resp = await fetch(`${DT_API}/chart/?symbol=${encodeURIComponent(symbol)}&interval=${interval}`);
+        const data = await resp.json();
+        if (data.error) {
+            console.warn(data.error);
+            return;
+        }
+
+        intradayChartInstance.data.labels = data.timestamps || [];
+        intradayChartInstance.data.datasets[0].data = data.closes || [];
+        intradayChartInstance.data.datasets[1].data = data.vwap || [];
+        intradayChartInstance.update();
+
+        if (data.latest_price) {
+            document.getElementById('chartLtpDisplay').textContent = fmtINR(data.latest_price);
+        }
+        if (data.vwap && data.vwap.length) {
+            const lastVwap = data.vwap[data.vwap.length - 1];
+            document.getElementById('chartVwapDisplay').textContent = lastVwap ? fmtINR(lastVwap) : '—';
+        }
+    } catch (e) {
+        console.error('Failed to load chart:', e);
+    }
+}
+
+// Update Volume Spike Leaderboard Chart
+function updateVolumeBarChart(scanResults) {
+    if (!volumeBarChartInstance || !scanResults || !scanResults.length) return;
+    const topVol = scanResults.slice(0, 6);
+    const labels = topVol.map(r => r.clean_symbol || r.symbol.replace('.NS', ''));
+    const values = topVol.map(r => r.volume_ratio || 1.0);
+    const colors = values.map(v => v >= 3.0 ? '#ef4444' : v >= 2.0 ? '#f59e0b' : '#3b82f6');
+
+    volumeBarChartInstance.data.labels = labels;
+    volumeBarChartInstance.data.datasets[0].data = values;
+    volumeBarChartInstance.data.datasets[0].backgroundColor = colors;
+    volumeBarChartInstance.update();
+}
+
+// =========================================================================
+// 2. DASHBOARD DATA AGGREGATION & METRICS
+// =========================================================================
 async function loadDashboard() {
     try {
         const resp = await fetch(DT_API + '/dashboard/');
         const data = await resp.json();
 
-        // Market status
-        const ms = data.market_status;
+        // 1. Market Status
+        const ms = data.market_status || {};
         const badge = document.getElementById('marketStatusBadge');
         if (ms.is_market_open) {
-            badge.textContent = '🟢 MARKET OPEN';
-            badge.style.background = 'rgba(16,185,129,0.15)'; badge.style.color = '#10b981';
+            badge.textContent = '🟢 LIVE MARKET';
+            badge.style.background = 'rgba(16, 185, 129, 0.15)';
+            badge.style.color = '#10b981';
+            badge.style.borderColor = 'rgba(16, 185, 129, 0.3)';
+        } else if (ms.is_pre_open) {
+            badge.textContent = '🟡 PRE-OPEN';
+            badge.style.background = 'rgba(245, 158, 11, 0.15)';
+            badge.style.color = '#fbbf24';
+            badge.style.borderColor = 'rgba(245, 158, 11, 0.3)';
         } else {
             badge.textContent = '🔴 MARKET CLOSED';
-            badge.style.background = 'rgba(239,68,68,0.15)'; badge.style.color = '#ef4444';
+            badge.style.background = 'rgba(244, 63, 94, 0.15)';
+            badge.style.color = '#f43f5e';
+            badge.style.borderColor = 'rgba(244, 63, 94, 0.3)';
+        }
+        if (ms.current_time_ist) {
+            document.getElementById('currentTimeIst').textContent = `As of ${ms.current_time_ist}`;
         }
 
-        // P&L
+        // 2. KPI Metrics
+        const b = data.budget || {};
         const pnl = data.pnl_summary || {};
-        document.getElementById('availCash').textContent = fmt(data.budget?.available_cash);
-        document.getElementById('realizedPnl').textContent = fmt(pnl.realized_pnl);
-        document.getElementById('realizedPnl').style.color = pnlColor(pnl.realized_pnl);
-        document.getElementById('unrealizedPnl').textContent = fmt(pnl.unrealized_pnl);
-        document.getElementById('unrealizedPnl').style.color = pnlColor(pnl.unrealized_pnl);
-        document.getElementById('totalCharges').textContent = fmt(pnl.total_charges);
-        const w = pnl.winners || 0, l = pnl.losers || 0;
-        document.getElementById('winRate').textContent = (w + l) > 0 ? Math.round(w / (w + l) * 100) + '%' : '—%';
-        document.getElementById('openPosCount').textContent = pnl.open_positions || 0;
 
-        // Positions
+        document.getElementById('availCash').textContent = fmtINR(b.available_cash);
+        document.getElementById('netEquityVal').textContent = 'Eq: ' + fmtINR(b.net_equity || b.available_cash);
+
+        const rPnl = pnl.realized_pnl || 0;
+        const rEl = document.getElementById('realizedPnl');
+        rEl.textContent = (rPnl >= 0 ? '+' : '') + fmtINR(rPnl);
+        rEl.className = 'kpi-value ' + pnlClass(rPnl);
+
+        const uPnl = pnl.unrealized_pnl || 0;
+        const uEl = document.getElementById('unrealizedPnl');
+        uEl.textContent = (uPnl >= 0 ? '+' : '') + fmtINR(uPnl);
+        uEl.className = 'kpi-value ' + pnlClass(uPnl);
+
+        document.getElementById('totalCharges').textContent = fmtINR(pnl.total_charges || 0);
+
+        const w = pnl.winners || 0;
+        const l = pnl.losers || 0;
+        const totalClosed = w + l;
+        const winRate = totalClosed > 0 ? (w / totalClosed * 100).toFixed(1) : '0.0';
+        document.getElementById('winRateVal').textContent = winRate + '%';
+        document.getElementById('winLossSplit').innerHTML = `<span>${w} Winners / ${l} Losers</span>`;
+        document.getElementById('closedTradesCount').textContent = `Closed: ${totalClosed} trades`;
+
+        const openCount = pnl.open_positions || 0;
+        document.getElementById('openPosCount').textContent = `Positions: ${openCount}`;
+
+        // 3. Render Positions & News & Alerts
         renderPositions(data.open_positions || []);
-
-        // News
         renderNews(data.recent_news || []);
-
-        // Alerts
         renderAlerts(data.active_alerts || []);
-    } catch (e) { console.error('Dashboard load error:', e); }
+
+    } catch (e) {
+        console.error('Failed to load dashboard:', e);
+    }
 }
 
+// Render Positions Table
 function renderPositions(positions) {
-    const el = document.getElementById('positionsTable');
-    if (!positions.length) { el.innerHTML = '<div style="color:var(--text-muted);font-size:0.82rem;padding:2rem;text-align:center;">No open positions</div>'; return; }
-    let html = '<table style="width:100%;font-size:0.78rem;"><thead><tr style="color:var(--text-muted);"><th>Symbol</th><th>Qty</th><th>Entry</th><th>CMP</th><th>P&L</th></tr></thead><tbody>';
+    const tbody = document.getElementById('positionsTableBody');
+    if (!positions || !positions.length) {
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: var(--text-muted); padding: 2rem;">No open positions active in this paper portfolio.</td></tr>';
+        return;
+    }
+
+    let html = '';
     positions.forEach(p => {
-        const pnlVal = p.unrealized_pnl;
-        html += `<tr><td style="font-weight:600;">${p.symbol}</td><td>${p.quantity}</td><td>${fmt(p.avg_entry)}</td><td>${fmt(p.current_price)}</td><td style="color:${pnlColor(pnlVal)};font-weight:600;">${fmt(pnlVal)}</td></tr>`;
+        const isLong = p.quantity > 0;
+        const sideColor = isLong ? 'text-positive' : 'text-negative';
+        const pnl = p.unrealized_pnl || 0;
+        html += `
+        <tr>
+            <td style="font-weight: 700; color: #fff;">
+                <a href="javascript:void(0)" onclick="loadStockForTrade('${p.symbol}')" style="color: #60a5fa; text-decoration: none;">
+                    ${p.symbol}
+                </a>
+            </td>
+            <td class="font-mono text-muted">${p.exchange}</td>
+            <td class="font-mono ${sideColor}" style="font-weight: 700;">
+                ${isLong ? 'BUY' : 'SELL'} (${Math.abs(p.quantity)})
+            </td>
+            <td class="font-mono">${fmtINR(p.avg_entry)}</td>
+            <td class="font-mono" style="font-weight: 600;">${fmtINR(p.current_price)}</td>
+            <td class="font-mono ${pnlClass(pnl)}" style="font-weight: 700;">
+                ${pnl >= 0 ? '+' : ''}${fmtINR(pnl)}
+            </td>
+            <td class="font-mono text-muted">${fmtINR(p.total_charges)}</td>
+            <td>
+                <button onclick="closeSinglePosition('${p.symbol}', ${p.quantity})" class="btn-secondary" style="padding: 0.2rem 0.5rem; font-size: 0.72rem; color: #f43f5e;">
+                    Square Off
+                </button>
+            </td>
+        </tr>`;
     });
-    html += '</tbody></table>';
-    el.innerHTML = html;
+    tbody.innerHTML = html;
 }
 
+// Render News Feed
 function renderNews(items) {
-    const el = document.getElementById('newsPanel');
-    if (!items.length) { el.innerHTML = '<div style="color:var(--text-muted);font-size:0.82rem;padding:2rem;text-align:center;">No news available</div>'; return; }
+    const el = document.getElementById('newsFeedList');
+    if (!items || !items.length) {
+        el.innerHTML = '<div style="color: var(--text-muted); font-size: 0.8rem; text-align: center; padding: 1.5rem;">No news items available.</div>';
+        return;
+    }
     let html = '';
-    items.forEach(n => {
-        const sColor = n.sentiment === 'POSITIVE' ? '#10b981' : n.sentiment === 'NEGATIVE' ? '#ef4444' : '#94a3b8';
-        html += `<div style="padding:0.5rem 0;border-bottom:1px solid var(--border-color);"><a href="${n.url || '#'}" target="_blank" style="font-size:0.78rem;color:#e2e8f0;text-decoration:none;">${n.headline}</a><div style="font-size:0.68rem;color:var(--text-muted);margin-top:0.2rem;"><span style="color:${sColor};font-weight:600;">${n.sentiment}</span> • ${n.source}</div></div>`;
+    items.slice(0, 8).forEach(n => {
+        const isPos = n.sentiment === 'POSITIVE';
+        const isNeg = n.sentiment === 'NEGATIVE';
+        const badgeColor = isPos ? 'background: rgba(16,185,129,0.15); color: #10b981;' : isNeg ? 'background: rgba(244,63,94,0.15); color: #f43f5e;' : 'background: rgba(148,163,184,0.15); color: #94a3b8;';
+        html += `
+        <div style="background: rgba(15, 23, 42, 0.5); padding: 0.65rem 0.85rem; border-radius: 8px; border: 1px solid var(--border-color);">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem; margin-bottom: 0.25rem;">
+                <a href="${n.url || '#'}" target="_blank" style="font-size: 0.8rem; font-weight: 600; color: #e2e8f0; text-decoration: none; line-height: 1.35;">
+                    ${n.headline}
+                </a>
+                <span class="badge" style="${badgeColor} font-size: 0.65rem; padding: 0.15rem 0.45rem; white-space: nowrap;">
+                    ${n.sentiment}
+                </span>
+            </div>
+            <div style="display: flex; justify-content: space-between; font-size: 0.68rem; color: var(--text-muted); font-family: var(--font-mono);">
+                <span>${n.source}</span>
+                <span>${n.published_at ? n.published_at.substring(0, 10) : 'Today'}</span>
+            </div>
+        </div>`;
     });
     el.innerHTML = html;
 }
 
-function renderAlerts(items) {
-    const el = document.getElementById('alertsPanel');
-    if (!items.length) { el.innerHTML = '<div style="color:var(--text-muted);font-size:0.82rem;text-align:center;">No active alerts</div>'; return; }
+// Render Alerts List
+function renderAlerts(alerts) {
+    const el = document.getElementById('activeAlertsList');
+    if (!alerts || !alerts.length) {
+        el.innerHTML = '<div style="color: var(--text-muted); font-size: 0.78rem; text-align: center; padding: 1.5rem;">No active surveillance alerts set.</div>';
+        return;
+    }
     let html = '';
-    items.forEach(a => {
-        html += `<div style="padding:0.4rem 0;border-bottom:1px solid var(--border-color);font-size:0.78rem;"><span style="font-weight:600;">${a.symbol}</span> — ${a.condition}</div>`;
+    alerts.forEach(a => {
+        html += `
+        <div style="background: rgba(15, 23, 42, 0.5); padding: 0.5rem 0.75rem; border-radius: 6px; border-left: 3px solid #f59e0b; border-top: 1px solid var(--border-color); border-right: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-weight: 700; color: #fff; font-size: 0.78rem;">${a.symbol}</span>
+            <span style="font-size: 0.72rem; color: var(--text-secondary);">${a.condition || a.alert_type}</span>
+            <span class="font-mono" style="font-size: 0.75rem; color: #fbbf24;">₹${a.threshold || '—'}</span>
+        </div>`;
     });
     el.innerHTML = html;
 }
 
-// Scanner
-async function runScan(type) {
-    const el = document.getElementById('scanResults');
-    el.innerHTML = '<div style="color:var(--text-muted);padding:1rem;text-align:center;">🔄 Scanning...</div>';
+// =========================================================================
+// 3. SCANNER & ENTRY SIGNALS
+// =========================================================================
+async function runScan(type = 'momentum') {
+    // Update active tab buttons
+    ['Mom', 'Brk', 'Vol', 'Full'].forEach(id => {
+        const btn = document.getElementById('scanBtn' + id);
+        if (btn) btn.classList.remove('active');
+    });
+    if (type === 'momentum') document.getElementById('scanBtnMom')?.classList.add('active');
+    if (type === 'breakout') document.getElementById('scanBtnBrk')?.classList.add('active');
+    if (type === 'volume') document.getElementById('scanBtnVol')?.classList.add('active');
+    if (type === 'full') document.getElementById('scanBtnFull')?.classList.add('active');
+
+    const tbody = document.getElementById('scanResultsBody');
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: var(--text-muted); padding: 2.5rem;">🔄 Scanning Nifty 50 universe...</td></tr>';
+
     try {
         const resp = await fetch(`${DT_API}/scan/?type=${type}`);
         const data = await resp.json();
         const results = data.results || data.momentum || data.breakouts || data.volume_spikes || [];
-        if (!results.length) { el.innerHTML = '<div style="color:var(--text-muted);padding:1rem;text-align:center;">No results found</div>'; return; }
-        let html = '<table style="width:100%;font-size:0.75rem;"><thead><tr style="color:var(--text-muted);"><th>Symbol</th><th>Score</th><th>Price</th><th>Vol Ratio</th><th>Chg%</th><th></th></tr></thead><tbody>';
-        results.forEach(r => {
-            html += `<tr><td style="font-weight:600;">${r.clean_symbol || r.symbol}</td><td style="color:#3b82f6;">${r.score?.toFixed(1)}</td><td>${fmt(r.price)}</td><td>${r.volume_ratio?.toFixed(1)}x</td><td style="color:${pnlColor(r.change_pct)};">${r.change_pct?.toFixed(2)}%</td><td><button onclick="document.getElementById('tradeSymbol').value='${r.clean_symbol || r.symbol}'" style="font-size:0.65rem;padding:0.15rem 0.4rem;cursor:pointer;background:var(--border-color);border:none;color:#fff;border-radius:4px;">Trade</button></td></tr>`;
+
+        if (!results.length) {
+            tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: var(--text-muted); padding: 2rem;">No candidates currently qualify for this scan criteria.</td></tr>';
+            return;
+        }
+
+        let html = '';
+        results.slice(0, 12).forEach((r, idx) => {
+            const sym = r.clean_symbol || r.symbol.replace('.NS', '').replace('.BO', '');
+            const scoreClass = r.score >= 70 ? 'score-high' : r.score >= 45 ? 'score-med' : 'score-low';
+            const chg = r.change_pct || 0;
+            html += `
+            <tr>
+                <td class="font-mono" style="font-weight: 700; color: #60a5fa;">#${idx + 1}</td>
+                <td>
+                    <span style="font-weight: 700; color: #fff;">${sym}</span>
+                    <span style="font-size: 0.7rem; color: var(--text-muted); margin-left: 0.25rem;">NSE</span>
+                </td>
+                <td class="font-mono" style="font-weight: 600;">${fmtINR(r.price)}</td>
+                <td class="font-mono ${pnlClass(chg)}" style="font-weight: 600;">
+                    ${chg >= 0 ? '+' : ''}${chg.toFixed(2)}%
+                </td>
+                <td class="font-mono text-secondary" style="font-weight: 600;">
+                    ${r.volume_ratio ? r.volume_ratio.toFixed(1) + 'x' : '—'}
+                </td>
+                <td>
+                    <span class="score-badge ${scoreClass}">${r.score ? r.score.toFixed(1) : '—'}</span>
+                </td>
+                <td class="font-mono text-muted">${r.rsi ? r.rsi.toFixed(1) : '—'}</td>
+                <td>
+                    <div style="display: flex; gap: 0.35rem;">
+                        <button onclick="loadStockForTrade('${sym}')" class="btn-primary" style="padding: 0.2rem 0.5rem; font-size: 0.72rem;">
+                            Trade
+                        </button>
+                        <button onclick="loadIntradayChart('${sym}')" class="btn-secondary" style="padding: 0.2rem 0.5rem; font-size: 0.72rem;">
+                            Chart
+                        </button>
+                    </div>
+                </td>
+            </tr>`;
         });
-        html += '</tbody></table>';
-        el.innerHTML = html;
-    } catch (e) { el.innerHTML = `<div style="color:#ef4444;padding:1rem;">Error: ${e.message}</div>`; }
+        tbody.innerHTML = html;
+
+        // Update Volume Leaderboard Chart
+        updateVolumeBarChart(results);
+
+    } catch (e) {
+        tbody.innerHTML = `<tr><td colspan="8" style="color: #f43f5e; text-align: center; padding: 2rem;">Scan error: ${e.message}</td></tr>`;
+    }
 }
 
-// Paper Order
-async function submitPaperOrder() {
-    const el = document.getElementById('tradeResult');
-    const symbol = document.getElementById('tradeSymbol').value.trim();
-    if (!symbol) { el.innerHTML = '<span style="color:#ef4444;">Enter a symbol</span>'; return; }
-    el.innerHTML = '<span style="color:var(--text-muted);">Submitting...</span>';
-    try {
-        const resp = await fetch(DT_API + '/order/', {
-            method: 'POST', headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken')},
-            body: JSON.stringify({
-                symbol: symbol, side: document.getElementById('tradeSide').value,
-                quantity: parseInt(document.getElementById('tradeQty').value),
-                order_type: 'MARKET', product: 'MIS',
-                exchange: document.getElementById('tradeExchange').value,
-            }),
-        });
-        const data = await resp.json();
-        const color = data.status === 'FILLED' ? '#10b981' : data.status === 'REJECTED' ? '#ef4444' : '#f59e0b';
-        el.innerHTML = `<span style="color:${color};font-weight:600;">[PAPER] ${data.status}</span> ${data.fill_price ? '@ ₹' + data.fill_price.toFixed(2) : ''} ${data.reasons ? data.reasons.join(', ') : ''}`;
-        loadDashboard();
-    } catch (e) { el.innerHTML = `<span style="color:#ef4444;">Error: ${e.message}</span>`; }
+// Load symbol into Order Terminal and fetch chart
+function loadStockForTrade(symbol) {
+    const clean = symbol.replace('.NS', '').replace('.BO', '');
+    document.getElementById('tradeSymbol').value = clean;
+    document.getElementById('chartSymbolInput').value = clean;
+    loadIntradayChart(clean);
+    getEntrySignal();
 }
 
-// Entry Signal
+// =========================================================================
+// 4. ENTRY SIGNALS & FREELLMAPI AI ADVISOR
+// =========================================================================
 async function getEntrySignal() {
     const symbol = document.getElementById('tradeSymbol').value.trim();
-    const el = document.getElementById('tradeResult');
-    if (!symbol) { el.innerHTML = '<span style="color:#ef4444;">Enter a symbol</span>'; return; }
-    el.innerHTML = '<span style="color:var(--text-muted);">Analyzing...</span>';
+    if (!symbol) return;
+
+    const box = document.getElementById('signalOutputBox');
+    const txt = document.getElementById('signalDetailsText');
+    const aiBox = document.getElementById('aiThesisContainer');
+    box.style.display = 'block';
+    aiBox.style.display = 'none';
+    txt.innerHTML = '<span style="color: var(--text-muted);">🔄 Evaluating intraday indicators and ORB levels...</span>';
+
     try {
-        const resp = await fetch(`${DT_API}/entry-signal/?symbol=${symbol}`);
+        const resp = await fetch(`${DT_API}/entry-signal/?symbol=${encodeURIComponent(symbol)}`);
         const data = await resp.json();
+        window._lastSignalData = data;
+
         if (data.signal) {
-            window._lastSignalData = data;
-            el.innerHTML = `<div style="padding:0.5rem;background:rgba(16,185,129,0.1);border-radius:6px;border:1px solid rgba(16,185,129,0.3);"><span style="color:#10b981;font-weight:700;">${data.direction} ${data.strategy}</span><br>Entry: ₹${data.entry_price} | SL: ₹${data.stop_loss} | T1: ₹${data.target_1}<br>R:R ${data.risk_reward} | Strength: ${data.strength}<div style="margin-top:0.4rem;"><button onclick="explainSignalWithAI(window._lastSignalData)" style="background:#2563eb;color:#fff;border:none;padding:0.25rem 0.6rem;border-radius:4px;font-size:0.7rem;cursor:pointer;">🤖 Explain with AI</button></div><div id="aiSignalBox"></div></div>`;
+            document.getElementById('signalBadge').textContent = `${data.direction} ${data.strategy}`;
+            document.getElementById('signalBadge').className = 'score-badge score-high';
+            txt.innerHTML = `
+                <div style="font-weight: 700; color: #34d399; margin-bottom: 0.25rem;">
+                    🎯 Valid Setup: ${data.description || 'Intraday breakout'}
+                </div>
+                <div style="display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.75rem; margin-top: 0.35rem;">
+                    <span>Entry: <strong>${fmtINR(data.entry_price)}</strong></span>
+                    <span style="color: #f43f5e;">SL: <strong>${fmtINR(data.stop_loss)}</strong></span>
+                    <span style="color: #10b981;">T1: <strong>${fmtINR(data.target_1)}</strong></span>
+                    <span>R:R: <strong>${data.risk_reward}:1</strong></span>
+                </div>
+            `;
+            // Show trade levels legend on chart
+            document.getElementById('levelsLegendBox').style.display = 'flex';
+            document.getElementById('legendEntry').textContent = fmtINR(data.entry_price);
+            document.getElementById('legendTarget').textContent = fmtINR(data.target_1);
+            document.getElementById('legendStop').textContent = fmtINR(data.stop_loss);
         } else {
-            el.innerHTML = `<span style="color:#f59e0b;">No signal: ${data.reason}</span>`;
+            document.getElementById('signalBadge').textContent = 'NO SETUP';
+            document.getElementById('signalBadge').className = 'score-badge score-med';
+            txt.innerHTML = `<span style="color: #f59e0b;">${data.reason || 'No strong breakout setup currently detected'}</span>`;
+            document.getElementById('levelsLegendBox').style.display = 'none';
         }
-    } catch (e) { el.innerHTML = `<span style="color:#ef4444;">Error: ${e.message}</span>`; }
+    } catch (e) {
+        txt.innerHTML = `<span style="color: #f43f5e;">Error evaluating signal: ${e.message}</span>`;
+    }
 }
 
-// Flatten All
-async function flattenAll() {
-    if (!confirm('[PAPER] Flatten all open positions?')) return;
+// Generate FreeLLMAPI AI Thesis
+async function explainSignalWithAI(signalData) {
+    if (!signalData) return;
+    const aiBox = document.getElementById('aiThesisContainer');
+    aiBox.style.display = 'block';
+    aiBox.innerHTML = '<span style="color: var(--text-muted);">🤖 FreeLLMAPI generating qualitative trading thesis...</span>';
+
     try {
-        await fetch(DT_API + '/flatten/', {method: 'POST', headers: {'X-CSRFToken': getCookie('csrftoken')}});
-        loadDashboard();
-    } catch (e) { console.error(e); }
+        const resp = await fetch(DT_API + '/ai-explain/', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken()},
+            body: JSON.stringify({ type: 'signal', data: signalData }),
+        });
+        const res = await resp.json();
+        aiBox.innerHTML = `<strong>🤖 AI Market Thesis (${res.source}):</strong> ${res.thesis}`;
+    } catch (e) {
+        aiBox.innerHTML = `<span style="color: #f43f5e;">AI thesis unavailable: ${e.message}</span>`;
+    }
 }
 
-// News
-async function refreshNews() {
-    const el = document.getElementById('newsPanel');
-    el.innerHTML = '<div style="color:var(--text-muted);padding:1rem;text-align:center;">🔄 Fetching...</div>';
+// =========================================================================
+// 5. ORDER SUBMISSION & POSITION ACTIONS
+// =========================================================================
+async function submitPaperOrder() {
+    const symbol = document.getElementById('tradeSymbol').value.trim();
+    const qty = parseInt(document.getElementById('tradeQty').value);
+    const side = document.getElementById('tradeSide').value;
+    const exch = document.getElementById('tradeExchange').value;
+    const statusBox = document.getElementById('orderStatusBox');
+
+    if (!symbol) {
+        statusBox.innerHTML = '<span style="color: #f43f5e;">Please enter a valid stock symbol.</span>';
+        return;
+    }
+
+    statusBox.innerHTML = '<span style="color: var(--text-muted);">Executing paper order &amp; calculating charges...</span>';
+
     try {
-        const resp = await fetch(`${DT_API}/news/?refresh=true`);
+        const resp = await fetch(DT_API + '/order/', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken()},
+            body: JSON.stringify({
+                symbol: symbol,
+                side: side,
+                quantity: qty,
+                order_type: 'MARKET',
+                product: 'MIS',
+                exchange: exch,
+            })
+        });
         const data = await resp.json();
-        renderNews(data.news || []);
-    } catch (e) { el.innerHTML = `<div style="color:#ef4444;">Error: ${e.message}</div>`; }
+        if (data.status === 'FILLED') {
+            statusBox.innerHTML = `<span style="color: #10b981; font-weight: 700;">✅ [PAPER FILL] ${side} ${qty} ${symbol} @ ${fmtINR(data.fill_price)}</span> (Slippage: ${data.slippage_pct.toFixed(2)}%)`;
+            loadDashboard();
+            loadOrders();
+        } else if (data.status === 'REJECTED') {
+            statusBox.innerHTML = `<span style="color: #f43f5e; font-weight: 700;">❌ [RISK REJECTED]</span> ${data.reasons ? data.reasons.join('; ') : 'Violates risk rules'}`;
+        } else {
+            statusBox.innerHTML = `<span style="color: #fbbf24;">Status: ${data.status}</span>`;
+        }
+    } catch (e) {
+        statusBox.innerHTML = `<span style="color: #f43f5e;">Execution error: ${e.message}</span>`;
+    }
 }
 
-// Backtest
+// Close single position
+async function closeSinglePosition(symbol, quantity) {
+    if (!confirm(`Square off paper position for ${symbol}?`)) return;
+    const side = quantity > 0 ? 'SELL' : 'BUY';
+    const qty = Math.abs(quantity);
+    try {
+        await fetch(DT_API + '/order/', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken()},
+            body: JSON.stringify({
+                symbol: symbol, side: side, quantity: qty,
+                order_type: 'MARKET', product: 'MIS', exchange: 'NSE'
+            })
+        });
+        loadDashboard();
+        loadOrders();
+    } catch (e) {
+        console.error(e);
+    }
+}
+
+// Flatten all positions
+async function flattenAll() {
+    if (!confirm('🛑 [PAPER TRADING] Close ALL open positions immediately at market price?')) return;
+    try {
+        await fetch(DT_API + '/flatten/', {
+            method: 'POST',
+            headers: {'X-CSRFToken': getCsrfToken()}
+        });
+        loadDashboard();
+        loadOrders();
+    } catch (e) {
+        console.error(e);
+    }
+}
+
+// =========================================================================
+// 6. QUANT TIME MACHINE (BACKTEST) & ALERTS & DISCLOSURES
+// =========================================================================
 async function runBacktest() {
-    const el = document.getElementById('backtestResult');
     const symbol = document.getElementById('btSymbol').value.trim();
-    if (!symbol) { el.innerHTML = '<span style="color:#ef4444;">Enter a symbol</span>'; return; }
-    el.innerHTML = '<div style="color:var(--text-muted);">🔄 Running backtest (may take a moment)...</div>';
+    const strategy = document.getElementById('btStrategy').value;
+    const days = parseInt(document.getElementById('btDays').value);
+    const container = document.getElementById('btResultContainer');
+
+    if (!symbol) return;
+    container.innerHTML = '<div style="color: var(--text-muted); text-align: center; padding: 1.5rem;">🔄 Simulating 5m candles & running Monte Carlo...</div>';
+
     try {
         const resp = await fetch(DT_API + '/backtest/', {
-            method: 'POST', headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken')},
-            body: JSON.stringify({
-                symbol: symbol, strategy: document.getElementById('btStrategy').value,
-                lookback_days: parseInt(document.getElementById('btDays').value),
-            }),
+            method: 'POST',
+            headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken()},
+            body: JSON.stringify({ symbol: symbol, strategy: strategy, lookback_days: days })
         });
         const data = await resp.json();
         if (data.summary) {
             const s = data.summary;
             const mc = data.monte_carlo || {};
-            el.innerHTML = `<div style="padding:0.5rem;background:rgba(59,130,246,0.1);border-radius:6px;border:1px solid rgba(59,130,246,0.3);font-size:0.78rem;"><strong>${symbol} ORB Backtest</strong><br>Trades: ${s.total_trades} | Win Rate: ${s.win_rate}%<br>Winners: ${s.winners} | Losers: ${s.losers}<br>Avg Win: ₹${s.avg_win?.toFixed(2)} | Avg Loss: ₹${s.avg_loss?.toFixed(2)}<br>Profit Factor: ${s.profit_factor?.toFixed(2)}<br>${mc.probability_profit ? `Monte Carlo: ${mc.probability_profit}% chance of profit` : ''}</div>`;
+            container.innerHTML = `
+                <div style="background: rgba(15, 23, 42, 0.6); padding: 0.75rem; border-radius: 8px; border: 1px solid var(--border-color);">
+                    <div style="display: flex; justify-content: space-between; font-weight: 700; color: #fff; margin-bottom: 0.35rem;">
+                        <span>${symbol.toUpperCase()} (${strategy})</span>
+                        <span class="${pnlClass(s.total_pnl)}">${s.total_pnl >= 0 ? '+' : ''}${fmtINR(s.total_pnl)}</span>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.35rem; font-family: var(--font-mono); font-size: 0.72rem; color: var(--text-secondary);">
+                        <span>Trades: <strong>${s.total_trades}</strong></span>
+                        <span>Win Rate: <strong>${s.win_rate}%</strong></span>
+                        <span>Profit Factor: <strong>${s.profit_factor}</strong></span>
+                        <span>Charges: <strong>${fmtINR(s.total_charges || 0)}</strong></span>
+                    </div>
+                    <div style="margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid var(--border-color); font-size: 0.72rem; color: #a78bfa;">
+                        🎲 Monte Carlo: <strong>${mc.probability_profit || '—'}%</strong> probability of profit
+                    </div>
+                </div>
+            `;
         } else {
-            el.innerHTML = `<span style="color:#f59e0b;">${data.error || 'No results'}</span>`;
+            container.innerHTML = `<div style="color: #f59e0b; padding: 1rem;">${data.error || 'No trades generated'}</div>`;
         }
-    } catch (e) { el.innerHTML = `<span style="color:#ef4444;">Error: ${e.message}</span>`; }
+    } catch (e) {
+        container.innerHTML = `<div style="color: #f43f5e; padding: 1rem;">Backtest error: ${e.message}</div>`;
+    }
 }
 
-// Analyst
-async function getAnalysis() {
-    const symbol = document.getElementById('analystSymbol').value.trim();
-    const el = document.getElementById('analystResult');
-    if (!symbol) { el.innerHTML = '<span style="color:#ef4444;">Enter a symbol</span>'; return; }
-    el.innerHTML = '<span style="color:var(--text-muted);">Loading...</span>';
+// Alerts Creation
+async function createAlert() {
+    const symbol = document.getElementById('alertSymbol').value.trim();
+    const type = document.getElementById('alertType').value;
+    const threshold = document.getElementById('alertThreshold').value;
+    if (!symbol) return;
+
     try {
-        const resp = await fetch(`${DT_API}/analyst/?symbol=${symbol}`);
-        const data = await resp.json();
-        const o = data.overview || {};
-        el.innerHTML = `<div style="font-size:0.75rem;"><strong>${o.name || symbol}</strong><br>Sector: ${o.sector || '—'} | MCap: ${o.market_cap_formatted || '—'}<br>PE: ${o.pe_ratio || '—'} | PB: ${o.pb_ratio || '—'}<br>ROE: ${data.ratios?.roe || '—'}% | ROCE: ${data.ratios?.roce || '—'}%<br>D/E: ${data.ratios?.debt_to_equity || '—'}</div>`;
-    } catch (e) { el.innerHTML = `<span style="color:#ef4444;">Error: ${e.message}</span>`; }
+        await fetch(DT_API + '/alerts/create/', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken()},
+            body: JSON.stringify({
+                symbol: symbol,
+                alert_type: type,
+                condition: `${type} ₹${threshold}`,
+                threshold: threshold ? parseFloat(threshold) : null,
+            })
+        });
+        loadDashboard();
+        document.getElementById('alertSymbol').value = '';
+        document.getElementById('alertThreshold').value = '';
+    } catch (e) {
+        console.error('Alert creation error:', e);
+    }
 }
 
-// Disclosures
+// Disclosures Loading
 async function loadDisclosures() {
     const symbol = document.getElementById('disclosureSymbol').value.trim();
-    const el = document.getElementById('disclosurePanel');
-    el.innerHTML = '<div style="color:var(--text-muted);padding:1rem;text-align:center;">🔄 Loading disclosures...</div>';
+    const feed = document.getElementById('disclosureFeed');
+    feed.innerHTML = '<div style="color: var(--text-muted); text-align: center; padding: 1.5rem;">🔄 Querying public SEBI PIT filings...</div>';
+
     try {
         const url = symbol ? `${DT_API}/disclosures/?symbol=${encodeURIComponent(symbol)}` : `${DT_API}/disclosures/`;
         const resp = await fetch(url);
         const data = await resp.json();
         const list = data.disclosures || [];
+
         if (!list.length) {
-            el.innerHTML = '<div style="color:var(--text-muted);padding:1rem;text-align:center;">No disclosures found</div>';
+            feed.innerHTML = '<div style="color: var(--text-muted); text-align: center; padding: 1.5rem;">No recent insider disclosures on record.</div>';
             return;
         }
-        let html = '<table style="width:100%;font-size:0.72rem;"><thead><tr style="color:var(--text-muted);"><th>Symbol</th><th>Filer</th><th>Type</th><th>Qty</th></tr></thead><tbody>';
-        list.slice(0, 15).forEach(d => {
-            const tc = d.transaction_type === 'BUY' ? '#10b981' : '#ef4444';
-            html += `<tr><td>${d.symbol}</td><td>${d.filer_name?.substring(0, 16) || '—'}</td><td style="color:${tc};font-weight:600;">${d.transaction_type}</td><td>${Number(d.quantity).toLocaleString('en-IN')}</td></tr>`;
+
+        let html = '<div style="display: flex; flex-direction: column; gap: 0.4rem;">';
+        list.slice(0, 6).forEach(d => {
+            const isBuy = d.transaction_type === 'BUY';
+            const typeColor = isBuy ? '#10b981' : '#f43f5e';
+            html += `
+            <div style="background: rgba(15, 23, 42, 0.5); padding: 0.5rem 0.65rem; border-radius: 6px; border: 1px solid var(--border-color); font-size: 0.72rem;">
+                <div style="display: flex; justify-content: space-between; font-weight: 700; color: #fff;">
+                    <span>${d.symbol}</span>
+                    <span style="color: ${typeColor};">${d.transaction_type} (${Number(d.quantity).toLocaleString('en-IN')} shares)</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; color: var(--text-muted); font-size: 0.68rem; margin-top: 0.2rem;">
+                    <span>${d.filer_name ? d.filer_name.substring(0, 20) : 'Insider'}</span>
+                    <span>${d.transaction_date || 'Recent'}</span>
+                </div>
+            </div>`;
         });
-        html += '</tbody></table>';
-        el.innerHTML = html;
+        html += '</div>';
+        feed.innerHTML = html;
     } catch (e) {
-        el.innerHTML = `<span style="color:#ef4444;">Error: ${e.message}</span>`;
+        feed.innerHTML = `<div style="color: #f43f5e; padding: 1rem;">Query error: ${e.message}</div>`;
     }
 }
 
-// AI Qualitative Explanation
-async function explainSignalWithAI(signalData) {
-    const el = document.getElementById('aiSignalBox');
-    if (!el) return;
-    el.innerHTML = '<span style="color:var(--text-muted);">🤖 Generating FreeLLMAPI AI thesis...</span>';
-    try {
-        const resp = await fetch(DT_API + '/ai-explain/', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken')},
-            body: JSON.stringify({type: 'signal', data: signalData}),
-        });
-        const res = await resp.json();
-        el.innerHTML = `<div style="margin-top:0.4rem;padding:0.4rem;background:rgba(59,130,246,0.1);border-radius:4px;font-size:0.72rem;color:#93c5fd;"><strong>🤖 AI Thesis (${res.source}):</strong> ${res.thesis}</div>`;
-    } catch (e) {
-        el.innerHTML = `<span style="color:#ef4444;">AI unavailable: ${e.message}</span>`;
-    }
-}
-
-// Load orders
+// Load Orders Audit Trail
 async function loadOrders() {
-    const el = document.getElementById('orderHistory');
+    const tbody = document.getElementById('orderAuditBody');
     try {
         const resp = await fetch(DT_API + '/orders/');
         const data = await resp.json();
         const orders = data.orders || [];
-        if (!orders.length) { el.innerHTML = '<div style="color:var(--text-muted);font-size:0.82rem;padding:2rem;text-align:center;">No orders yet</div>'; return; }
-        let html = '<table style="width:100%;font-size:0.72rem;"><thead><tr style="color:var(--text-muted);"><th>Symbol</th><th>Side</th><th>Qty</th><th>Fill</th><th>Status</th></tr></thead><tbody>';
-        orders.slice(0, 20).forEach(o => {
-            const sc = o.side === 'BUY' ? '#10b981' : '#ef4444';
-            const stc = o.status === 'FILLED' ? '#10b981' : o.status === 'REJECTED' ? '#ef4444' : '#f59e0b';
-            html += `<tr><td>${o.symbol}</td><td style="color:${sc};font-weight:600;">${o.side}</td><td>${o.quantity}</td><td>${o.avg_fill_price ? '₹' + parseFloat(o.avg_fill_price).toFixed(2) : '—'}</td><td style="color:${stc};">${o.status}</td></tr>`;
+
+        if (!orders.length) {
+            tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; color: var(--text-muted); padding: 2rem;">No paper trade executions logged yet.</td></tr>';
+            return;
+        }
+
+        let html = '';
+        orders.slice(0, 15).forEach(o => {
+            const isBuy = o.side === 'BUY';
+            const sideColor = isBuy ? 'text-positive' : 'text-negative';
+            const statusColor = o.status === 'FILLED' ? 'text-positive' : o.status === 'REJECTED' ? 'text-negative' : 'text-muted';
+            const timeStr = o.created_at ? o.created_at.substring(11, 19) : '—';
+            html += `
+            <tr>
+                <td class="font-mono text-muted" style="font-size: 0.75rem;">${o.order_id.substring(0, 8)}...</td>
+                <td class="font-mono">${timeStr}</td>
+                <td style="font-weight: 700; color: #fff;">${o.symbol}</td>
+                <td class="font-mono ${sideColor}" style="font-weight: 700;">${o.side}</td>
+                <td class="font-mono">${o.quantity}</td>
+                <td class="font-mono text-muted">${o.order_type}</td>
+                <td class="font-mono" style="font-weight: 600;">${o.avg_fill_price ? fmtINR(o.avg_fill_price) : 'MKT'}</td>
+                <td class="font-mono ${statusColor}" style="font-weight: 700;">${o.status}</td>
+                <td>
+                    <span class="badge" style="background: rgba(245, 158, 11, 0.15); color: #fbbf24; font-size: 0.68rem; font-family: var(--font-mono);">
+                        SIMULATED
+                    </span>
+                </td>
+            </tr>`;
         });
-        html += '</tbody></table>';
-        el.innerHTML = html;
-    } catch (e) { el.innerHTML = `<div style="color:#ef4444;">Error loading orders</div>`; }
+        tbody.innerHTML = html;
+    } catch (e) {
+        console.error('Failed to load orders:', e);
+    }
 }
 
-function getCookie(name) {
-    let v = null;
-    document.cookie.split(';').forEach(c => {
-        c = c.trim();
-        if (c.startsWith(name + '=')) v = c.substring(name.length + 1);
-    });
-    return v;
+// Refresh News Manually
+async function refreshNews() {
+    const el = document.getElementById('newsFeedList');
+    el.innerHTML = '<div style="color: var(--text-muted); text-align: center; padding: 2rem;">🔄 Fetching latest RSS & announcements...</div>';
+    try {
+        const resp = await fetch(`${DT_API}/news/?refresh=true`);
+        const data = await resp.json();
+        renderNews(data.news || []);
+    } catch (e) {
+        el.innerHTML = `<div style="color: #f43f5e; padding: 1rem;">Failed: ${e.message}</div>`;
+    }
 }
 
-// Initialize
+// Initialize on DOM Ready
 document.addEventListener('DOMContentLoaded', () => {
+    initCharts();
     loadDashboard();
     loadOrders();
+    runScan('momentum');
+    loadIntradayChart('RELIANCE');
+    loadDisclosures();
+
+    // Auto-refresh every 30 seconds
     setInterval(loadDashboard, 30000);
 });
 </script>
