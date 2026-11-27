@@ -20,7 +20,8 @@ This document describes the complete dashboard integration for the **Ultimate AI
 | **6. 🔄 Backtesting (`/backtest/`)** | Point-in-Time Simulation | Look-ahead bias-free simulation, adjustable equity curve vs NIFTY 50, CAGR, Sharpe ratio, maximum drawdown, and monthly rebalance log |
 | **7. ⚙️ Settings (`/settings/`)** | Factor Weights & Governance | Configurable scoring weights (Quality 30%, Growth 20%, Valuation 15%, Momentum 15%, Catalyst 10%, Risk -10%), screening defaults, and SEBI compliance text |
 | **8. 🎯 IPO Analysis (`/ipo/`)** | Exchange Surveillance | Forensics on NSE/BSE offerings, verified Chittorgarh timelines, GMP tracking, 9 Legendary Strategy breakdown |
-| **⚡ REST API (`/api/v1/`)** | Programmatic Interface | Full Django REST Framework endpoints for automated quantitative pipelines |
+| **9. ⚡ Day Trading (`/daytrading/`)** | Intraday Workstation | 11 quantitative skills, Chart.js Price/VWAP Visualizer & Volume Spike Leaderboard matching the Home Dashboard UI design, paper terminal with triple-lock safety |
+| **⚡ REST API (`/api/v1/` & `/daytrading/api/`)** | Programmatic Interface | Full Django REST Framework endpoints for automated quantitative pipelines |
 | **🎈 Streamlit App (`streamlit_app.py`)** | Interactive Analytics | Standalone Streamlit dashboard (`streamlit run streamlit_app.py`) with Plotly charts and report downloads |
 
 ---
@@ -347,10 +348,38 @@ src/
 
 ---
 
+## [DAY TRADING] Day Trading & Intraday Intelligence Dashboard (`/daytrading/`)
+
+### 1. Architectural & Visual Overview
+The Day Trading dashboard is integrated directly into the core Django application, inheriting `base.html` and following the exact design guidelines of the Executive Market Dashboard (`templates/market/dashboard.html`):
+- **Design Uniformity**: Built on `static/css/fintech.css` using the same dark palette (`#070a12`, `#0f172a`), KPI metrics grid (`.kpi-grid`), institutional cards (`.fin-card`), and tables (`.fin-table`).
+- **Interactive Chart.js Visualizers**:
+  - `intradayPriceChart`: High-performance 5m area line chart plotting real-time prices against intraday VWAP with colored overlays for Entry (Blue), Targets (Green), and Stop-Loss (Red).
+  - `volumeSpikeBarChart`: Horizontal bar chart displaying the top 6 volume spike leaders relative to 20-day average volume.
+
+### 2. Supported Day Trading Endpoints
+| Endpoint | Method | Functionality |
+| :--- | :---: | :--- |
+| `/daytrading/` | `GET` | Main Day Trading & Intraday Intelligence Dashboard view. |
+| `/daytrading/api/dashboard/` | `GET` | Aggregated JSON feed for budget, open positions, P&L, news, and alerts. |
+| `/daytrading/api/chart/` | `GET` | Real-time 5m/15m OHLCV candles, volume, and daily session reset VWAP. |
+| `/daytrading/api/scan/` | `GET` | Algorithmic scanner (momentum, breakout, volume spikes, full scan). |
+| `/daytrading/api/entry-signal/` | `GET` | Opening Range Breakout (15m), VWAP bounce, and momentum signals. |
+| `/daytrading/api/exit-check/<plan_id>/` | `GET` | Live evaluate stop-loss, targets, and automatic 15:15 IST square-off. |
+| `/daytrading/api/order/` | `POST` | Simulated paper order execution with risk checks and statutory charges. |
+| `/daytrading/api/positions/` | `GET` | Open paper positions and floating P&L. |
+| `/daytrading/api/orders/` | `GET` | Chronological paper order execution audit history. |
+| `/daytrading/api/backtest/` | `POST` | Point-in-time 5m historical strategy replay & Monte Carlo simulation. |
+| `/daytrading/api/disclosures/` | `GET` | SEBI insider trading (PIT) filings & BSE bulk deals. |
+| `/daytrading/api/ai-explain/` | `POST` | FreeLLMAPI qualitative thesis generation & catalyst commentary. |
+
+---
+
 ## Version History
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 2.5.0 | 2026-11-27 | Complete India-first Day Trading & Intraday Intelligence module with all 11 skills, Chart.js visualizers matching Home Dashboard, FreeLLMAPI AI advisor, and 82 automated tests. |
 | 2.0.0 | 2026-10-22 | Legendary investor strategies, probability analysis, advanced technical, DCF, risk management, portfolio macro, sentiment radar |
 | 1.0.0 | 2026-10-20 | Core agents, basic scoring, rankings, backtesting, dashboard |
 

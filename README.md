@@ -2,7 +2,7 @@
 
 [![Python 3.10 | 3.11 | 3.12](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12-blue.svg)](https://www.python.org/)
 [![Django 5.0+](https://img.shields.io/badge/django-5.0+-green.svg)](https://www.djangoproject.com/)
-[![Tests Passing](https://img.shields.io/badge/pytest-70%20passed%2C%201%20skipped-brightgreen.svg)](tests/)
+[![Tests Passing](https://img.shields.io/badge/pytest-82%20passed%2C%200%20failed-brightgreen.svg)](tests/)
 [![Stress Tested](https://img.shields.io/badge/concurrency-1000%20reqs%20%7C%200%20locks-brightgreen.svg)](tests/stress_test_concurrency.py)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey.svg)](README.md)
@@ -90,7 +90,8 @@ Unlike superficial "AI wrapper" tools that ask generic LLMs for speculative mark
 | **IPO Intelligence Engine** | `/ipo/` | Tracks ongoing, upcoming, and recently listed Mainboard & SME offerings. Analyzes DRHP/RHP metrics, Fresh Issue vs. OFS capital split, live Grey Market Premium (GMP), expected listing gains, institutional subscription rates (QIB, NII, Retail), and 9 legendary investor match ratings. |
 | **Algorithmic Backtesting** | `/backtest/` | Point-in-time quantitative backtesting without look-ahead bias, periodic rebalancing (monthly/quarterly), cumulative equity curve vs. Nifty 50 benchmark, CAGR, Sharpe ratio, volatility, and maximum drawdown calculations. |
 | **CLI & Automation Hub** | `/cli-analysis/` | Browser-based interactive terminal window executing background analysis workflows (`python -m src.main analyze --index bse500 --top 60`) with real-time log streaming. |
-| **REST API v1** | `/api/v1/` | Full Django REST Framework API providing programmatic JSON feeds for market tickers, stock research, rankings, and IPO records. |
+| **Day Trading & Intraday Intelligence** | `/daytrading/` | Full India-first Day Trading workstation integrating all 11 skills: Momentum/Breakout/Volume Scanner, News Sentiment & Catalysts, Intraday Entry Signals (ORB/VWAP), Stop-Loss & Targets, Risk Engine (2% max loss, daily loss cutoff), Capital & Budget Allocation, Surveillance Alerts, Time Machine (Historical 5m Replay & Monte Carlo), Company Fundamental Analyst, SEBI Insider Disclosures (Pelosi India), and Paper Broker with triple-lock safety. Includes Chart.js Price/VWAP Visualizer & Volume Spike Leaderboard matching the Home Dashboard UI design. |
+| **REST API v1** | `/api/v1/` & `/daytrading/api/` | Full Django REST Framework API providing programmatic JSON feeds for market tickers, stock research, rankings, IPO records, and day trading endpoints. |
 
 ---
 
@@ -265,6 +266,31 @@ LOG_LEVEL=INFO
 
 ---
 
+## ⚡ Day Trading & Intraday Intelligence Module
+
+The application includes a fully integrated, India-first Day Trading & Intraday Intelligence module (`/daytrading/`) that implements all 11 quantitative skills with strict paper-only safety:
+
+### The 11 Quantitative Day Trading Skills
+1. **Trader Scanner (`scanner.py`)**: Screens Nifty 50 and liquid BSE securities for Momentum, Opening Range Breakouts (ORB), and Volume Spikes against 20-day historical moving averages.
+2. **Trader News (`news.py`)**: Real-time aggregation of Indian market news via Yahoo Finance India RSS and official BSE corporate filings with automated positive/negative sentiment scoring.
+3. **Trader Entry (`entry.py`)**: Generates explainable intraday entry signals based on ORB 15-minute breakouts, VWAP bounce triggers, and momentum bursts.
+4. **Trader Exit (`exit_planner.py`)**: Calculates dynamic ATR-based stop-losses, partial profit targets (Target 1), full exit targets (Target 2), trailing stops, and automatic 15:15 IST square-off evaluations.
+5. **Trader Risk (`risk.py`)**: Server-side enforced risk management implementing 2% maximum capital risk per trade, single position size caps (20%), max open positions limit (5), and daily loss lockouts.
+6. **Trader Budget (`budget.py`)**: Complete INR capital accounting, available margin tracking, and synchronized realized/unrealized P&L.
+7. **Trader Alerts (`alerts.py`)**: Real-time surveillance triggers monitoring price thresholds, breakouts, and unusual volume surges.
+8. **Trader Time Machine (`timemachine.py`)**: Point-in-time historical 5-minute candle replay without look-ahead bias, factoring in Indian statutory transaction charges and executing 1,000-run Monte Carlo simulations.
+9. **Trader Analyst (`analyst.py`)**: Provides fundamental context (P/E, P/B, ROE, ROCE, Debt/Equity) from `FundamentalData` models.
+10. **Trader Pelosi / Indian Public Disclosures (`disclosure.py`)**: Tracks legally mandated public SEBI insider trading (PIT regulations) filings, promoter acquisitions, and BSE bulk deals.
+11. **Trader Broker / Paper Execution (`paper_broker.py`)**: Simulated brokerage engine enforcing triple-lock paper safety (`is_paper = True`), simulated slippage (0.01%–0.05%), and full Indian statutory charges (STT, brokerage, GST, exchange fees, stamp duty).
+
+### Institutional GUI with Chart.js Visualizers
+- **Visual Design Parity:** Styled to match the Home (Dashboard) page using the institutional `fintech.css` design system (`.fin-card`, `.kpi-grid`, `.fin-table`, monospace typography).
+- **Intraday Price & VWAP Visualizer (Chart.js):** Real-time 5m area line chart plotting price alongside intraday VWAP with dynamic colored horizontal overlays for Entry (Blue), Target 1 & 2 (Green), and Stop-Loss (Red).
+- **Volume Spike Leaderboard (Chart.js):** Horizontal bar chart comparing relative volume surges across top liquid equities.
+- **FreeLLMAPI AI Advisor:** Generates qualitative trading theses and catalyst explanations without altering deterministic prices or risk calculations.
+
+---
+
 ## 🧪 Running Automated Tests
 
 To execute the test suite:
@@ -279,7 +305,7 @@ pytest -v
 
 Expected result:
 ```
-======================= 70 passed, 1 skipped in ~10s =======================
+======================= 82 passed, 0 failed in ~17s =======================
 ```
 
 To run the 1,000-request high-concurrency stress test:
