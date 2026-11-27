@@ -95,6 +95,61 @@ def api_news(request):
 
 
 # ---------------------------------------------------------------------------
+# API: Intraday Chart Data
+# ---------------------------------------------------------------------------
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def api_intraday_chart(request):
+    """Fetch intraday candles and calculated VWAP for chart display."""
+    symbol = request.GET.get("symbol", "RELIANCE")
+    exchange = request.GET.get("exchange", "NSE")
+    interval = request.GET.get("interval", "5m")
+    period = request.GET.get("period", "1d")
+    try:
+        from .services.market_data import get_intraday_candles, normalize_symbol
+        from .services.indicators import calculate_intraday_indicators
+        import pandas as pd
+
+        df = get_intraday_candles(symbol, interval=interval, period=period, exchange=exchange)
+        if df is None or len(df) < 3:
+            df = get_intraday_candles(symbol, interval=interval, period="5d", exchange=exchange)
+
+        if df is None or df.empty:
+            return Response({"error": "No candle data available", "symbol": symbol}, status=404)
+
+        df = calculate_intraday_indicators(df)
+
+        if hasattr(df.index, "date"):
+            last_date = df.index[-1].date()
+            session_df = df[df.index.date == last_date]
+            if not session_df.empty:
+                df = session_df
+
+        timestamps = [idx.strftime("%H:%M") for idx in df.index]
+        closes = [round(float(c), 2) for c in df["Close"]]
+        opens = [round(float(o), 2) for o in df["Open"]]
+        highs = [round(float(h), 2) for h in df["High"]]
+        lows = [round(float(l), 2) for l in df["Low"]]
+        volumes = [int(v) for v in df["Volume"]]
+        vwap_vals = [round(float(v), 2) if pd.notna(v) else None for v in df.get("VWAP", [])]
+
+        return Response({
+            "symbol": normalize_symbol(symbol, exchange),
+            "timestamps": timestamps,
+            "closes": closes,
+            "opens": opens,
+            "highs": highs,
+            "lows": lows,
+            "volumes": volumes,
+            "vwap": vwap_vals,
+            "latest_price": closes[-1] if closes else None,
+        })
+    except Exception as e:
+        logger.error(f"Chart data error for {symbol}: {e}")
+        return Response({"error": str(e)}, status=500)
+
+
+# ---------------------------------------------------------------------------
 # API: Entry Signal
 # ---------------------------------------------------------------------------
 @api_view(["GET"])
