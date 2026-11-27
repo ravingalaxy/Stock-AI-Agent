@@ -375,6 +375,53 @@ One-click report generation with the mandatory SEBI compliance disclaimer:
 
 ---
 
+## 5E. Day Trading & Intraday Intelligence Workstation (`/daytrading/`)
+
+The Day Trading workstation (`/daytrading/`) provides an institutional intraday execution terminal, algorithmic setup detector, and risk-managed paper trading sandbox designed specifically for Indian equity markets (NSE & BSE in INR):
+
+### 1. Unified Bloomberg/FactSet-Grade GUI Layout
+- **Visual Parity with Executive Dashboard**: Built using the institutional `fintech.css` design system (`.fin-card`, `.kpi-grid`, `.fin-table`, monospace numbers, dark theme).
+- **Executive Metrics Ribbon (`kpi-grid`)**:
+  - **Available Capital (INR)**: Real-time available cash balance for intraday (MIS) margin deployment.
+  - **Net Realized P&L**: Profit/Loss locked in from closed paper trades, color-coded green (`text-positive`) or red (`text-negative`).
+  - **Floating Unrealized P&L**: Live float on open positions updated from market quotes.
+  - **Statutory Charges (INR)**: Accurate Indian transaction cost calculation (STT, Brokerage up to ₹20 cap, GST @ 18%, Exchange charges, Stamp Duty).
+  - **Win Rate & Efficiency**: Live calculation of strategy win percentage, win/loss count, and daily loss headroom.
+  - **Active Positions**: Open positions count vs. 5-position maximum risk threshold.
+
+### 2. Interactive Chart.js Technical Visualizers
+- **Intraday Price & VWAP Visualizer**:
+  - Plots 5-minute historical candles alongside the session-reset **Volume-Weighted Average Price (VWAP)**.
+  - When an intraday signal or trade plan is loaded, the chart dynamically projects colored horizontal reference lines:
+    - 🔵 **Entry Price Level**
+    - 🟢 **Target 1 & Target 2 Profit Levels**
+    - 🔴 **Stop-Loss Risk Level**
+  - Interactive controls allow switching between 5m and 15m candle intervals and loading any NSE/BSE security on demand.
+- **Volume Spike Leaderboard (Chart.js Horizontal Bar)**:
+  - Ranks scanned stocks by relative volume multiplier ($Volume / 20\text{-Day Avg}$).
+  - Color-coded bars highlight institutional volume surges ($>3.0\times$ Red, $>2.0\times$ Amber, Normal Blue).
+
+### 3. The 11 Quantitative Day Trading Skills
+1. **Trader Scanner (`scanner.py`)**: Instant scanning across Momentum, Opening Range Breakouts, and Volume Spikes. Correctly measures intraday returns from today's 09:15 open candle.
+2. **Trader News (`news.py`)**: Real-time RSS feeds from Yahoo Finance India and official BSE corporate announcements with automated positive/negative sentiment categorization.
+3. **Trader Entry (`entry.py`)**: Algorithmic trigger detection for Opening Range Breakouts (ORB 15m), VWAP bounces, and momentum bursts.
+4. **Trader Exit (`exit_planner.py`)**: Evaluates ATR-based stop-losses, partial profit taking (Target 1), full exit (Target 2), trailing stops, and mandatory 15:15 IST MIS square-offs.
+5. **Trader Risk (`risk.py`)**: Enforces pre-trade capital guardrails: maximum 2% risk per trade, 20% single position cap, 5 concurrent open positions, and daily loss lockouts.
+6. **Trader Budget (`budget.py`)**: Full capital accounting tracking used margin, cash, and synchronized realized/unrealized P&L.
+7. **Trader Alerts (`alerts.py`)**: Real-time conditional surveillance for price crossovers and unusual volume spikes.
+8. **Trader Time Machine (`timemachine.py`)**: Historical 5-minute bar replay without look-ahead bias, factoring in Indian statutory transaction costs and executing 1,000-run Monte Carlo simulations.
+9. **Trader Analyst (`analyst.py`)**: Instant access to balance sheet fundamentals, P/E, P/B, ROE, ROCE, and Debt/Equity metrics.
+10. **Trader Pelosi / Indian Disclosures (`disclosure.py`)**: Ingestion of legally mandated SEBI Prohibition of Insider Trading (PIT) promoter/director filings and BSE bulk/block deals.
+11. **Trader Broker / Paper Execution (`paper_broker.py`)**: Full paper brokerage simulation with triple-lock safety (`is_paper = True`), simulated slippage (0.01%–0.05%), and full transaction cost deductions.
+
+### 4. FreeLLMAPI AI Qualitative Advisor
+- Leverages the platform's unified `FREELLM_API_KEY` gateway.
+- Generates natural language qualitative trading theses explaining technical setups.
+- Evaluates corporate news catalysts and strategy backtests.
+- Strict security boundary: The LLM is strictly qualitative; deterministic Python remains 100% authoritative for all calculations, prices, indicators, and executions.
+
+---
+
 ## 6. How Real-Time Dynamic Market Feeds Work in the Background
 
 The application connects directly to live market feeds via `yfinance`:
@@ -402,6 +449,17 @@ The platform includes full Django REST Framework endpoints accessible at `/api/v
 | `/api/v1/market/summary/` | `GET` | Retrieve benchmark indices, market breadth, and active stock counts. |
 | `/api/market/pulse/` | `GET` | Fast JSON pulse endpoint for live index quotes and market breadth. |
 | `/api/market/sync/` | `GET/POST`| Triggers live exchange synchronization for monitored securities. |
+| `/daytrading/api/dashboard/` | `GET` | Aggregated day trading dashboard data (budget, P&L, positions, news, alerts). |
+| `/daytrading/api/chart/` | `GET` | Intraday 5m/15m OHLCV candles, volume, and calculated daily session VWAP. |
+| `/daytrading/api/scan/` | `GET` | Intraday screening (momentum, breakout, volume spikes, full scan). |
+| `/daytrading/api/entry-signal/` | `GET` | Algorithmic entry signal generation (ORB, VWAP bounce, momentum bursts). |
+| `/daytrading/api/exit-check/<plan_id>/` | `GET` | Live exit evaluation (stop-loss, target 1, target 2, 15:15 MIS square-off). |
+| `/daytrading/api/order/` | `POST` | Simulated paper order execution with risk checks and statutory charges. |
+| `/daytrading/api/positions/` | `GET` | Open paper positions and floating P&L. |
+| `/daytrading/api/orders/` | `GET` | Chronological paper order execution audit history. |
+| `/daytrading/api/backtest/` | `POST` | Point-in-time 5m historical strategy replay & Monte Carlo simulation. |
+| `/daytrading/api/disclosures/` | `GET` | SEBI insider trading (PIT) filings & BSE bulk deals. |
+| `/daytrading/api/ai-explain/` | `POST` | FreeLLMAPI qualitative thesis generation & catalyst commentary. |
 
 ---
 
@@ -415,15 +473,13 @@ The platform includes full Django REST Framework endpoints accessible at `/api/v
 # 2. Run the development server
 python manage.py runserver 8000
 ```
-Open **[http://127.0.0.1:8000/](http://127.0.0.1:8000/)** in your browser.
+Open **[http://127.0.0.1:8000/](http://127.0.0.1:8000/)** for the Executive Market Dashboard.  
+Open **[http://127.0.0.1:8000/daytrading/](http://127.0.0.1:8000/daytrading/)** for the Day Trading & Intraday Intelligence workstation.
 
 ### Running Test Verification
 ```powershell
-# Run full pytest test suite (63 tests)
+# Run full pytest test suite (82 tests)
 pytest -v
-
-# Run Django test runner (37 tests)
-python manage.py test tests
 ```
 
 ---

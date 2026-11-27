@@ -295,7 +295,8 @@ python manage.py runserver 8000
   4. 💼 **Portfolio Tools** - Real-time holdings, P&L, adjustable sector allocation (Donut & Bar), concentration alerts (>20% stock, >30% sector), position-size & stop-loss calculators
   5. 🔄 **Quant Backtesting** - Point-in-time simulation without look-ahead bias, adjustable equity curves vs NIFTY 50, CAGR, Sharpe ratio, and trade log
   6. ⚙️ **Settings & Weights** - Configurable factor weights (Quality 30%, Growth 20%, Valuation 15%, Momentum 15%, Catalyst 10%, Risk Penalty -10%), screening defaults, and SEBI compliance text
-  - ⚡ **REST API V1** (`/api/v1/`) - Programmatic Django REST Framework endpoints
+  7. ⚡ **Day Trading & Intraday Intelligence** (`/daytrading/`) - 11 quantitative skills, Chart.js Price/VWAP Visualizer & Volume Spike Leaderboard matching the Home Dashboard UI design, paper terminal with triple-lock safety
+  - ⚡ **REST API V1** (`/api/v1/` & `/daytrading/api/`) - Programmatic Django REST Framework endpoints
 
 ### **Institutional Features:**
 - 📈 **Adjustable & Responsive Charts** with 1M, 3M, 6M, 1Y timeframe filtering, indicator toggles (SMA 50, SMA 200, Bollinger Bands, Volume, S/R), linear/log scales, height presets (S, M, L), fullscreen mode, and touch/wheel zoom & pan with ↺ Reset Zoom
@@ -339,6 +340,9 @@ test_core.py::TestScoring::test_calculate_composite PASSED
 
 # Scoring tests
 .venv\Scripts\python -m pytest tests/test_core.py::TestScoring -v
+
+# Day Trading & Intraday Intelligence Suite (82 tests across 15 test classes)
+.venv\Scripts\python -m pytest tests/test_daytrading.py -v
 ```
 
 ### **Run with Coverage**
