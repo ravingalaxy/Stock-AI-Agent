@@ -23,7 +23,7 @@
 7. [Cross-Platform Portability & System Requirements](#-cross-platform-portability--system-requirements)
 8. [Quick Start (One-Click Setup)](#-quick-start-one-click-setup)
 9. [Manual Step-by-Step Installation](#-manual-step-by-step-installation)
-10. [Environment Configuration (.env)](#-environment-configuration-env)elligence)
+10. [Environment Configuration (.env)](#-environment-configuration-env)
 11. [Running Automated Tests](#-running-automated-tests)
 12. [Troubleshooting & FAQ](#-troubleshooting--faq)
 13. [License & Ethical Compliance](#-license--ethical-compliance)
