@@ -24,9 +24,10 @@
 8. [Quick Start (One-Click Setup)](#-quick-start-one-click-setup)
 9. [Manual Step-by-Step Installation](#-manual-step-by-step-installation)
 10. [Environment Configuration (.env)](#-environment-configuration-env)
-11. [Running Automated Tests](#-running-automated-tests)
-12. [Troubleshooting & FAQ](#-troubleshooting--faq)
-13. [License & Ethical Compliance](#-license--ethical-compliance)
+11. [Day Trading & Intraday Intelligence Module](#-day-trading--intraday-intelligence)
+12. [Running Automated Tests](#-running-automated-tests)
+13. [Troubleshooting & FAQ](#-troubleshooting--faq)
+14. [License & Ethical Compliance](#-license--ethical-compliance)
 
 ---
 
